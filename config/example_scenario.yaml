@@ -1,6 +1,6 @@
-entity:
+anchor:
   id: "perceptron"
-  type: "xyw_agent"
+  type: "xyw_agent" # or: agents also point anchors with extra attributes?
   controller_params: # either do this (ugly) or seperate APF planner and controller
     max_vel_x: 5.0
     max_vel_y: 5.0
@@ -16,9 +16,9 @@ entity:
     topic_name: "/cmd_vel"
     rotation_target: "enemy"
 
-entity:
+anchor:
   id: "enemy"
-  type: "point_anchor"
+  type: "point"
   position:
     type: "pose_topic"
     topic_name: "/enemy_pose"
@@ -32,9 +32,9 @@ entity:
       d_rec: true # take reciprocal of distance before calculating f
       f_max: 10.0 # limit maximum force
 
-entity:
+anchor:
   id: "obstacle"
-  type: "point_anchor"
+  type: "point"
   position:
     type: "static_point"
     x: 0.0
