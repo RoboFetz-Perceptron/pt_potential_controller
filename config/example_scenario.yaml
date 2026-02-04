@@ -1,0 +1,48 @@
+entity:
+  id: "perceptron"
+  type: "xyw_agent"
+  controller_params: # either do this (ugly) or seperate APF planner and controller
+    max_vel_x: 5.0
+    max_vel_y: 5.0
+    max_vel_w: 5.0
+    w_pid_p: 1.0
+    w_pid_i: 1.0
+    w_pid_d: 1.0
+  position:
+    type: "pose_topic"
+    topic_name: "/own_pose"
+  result:
+    type: "cmd_vel_topic"
+    topic_name: "/cmd_vel"
+    rotation_target: "enemy"
+
+entity:
+  id: "enemy"
+  type: "point_anchor"
+  position:
+    type: "pose_topic"
+    topic_name: "/enemy_pose"
+  potentials:
+    linear: # f = lin*d + const
+      lin: 1.0
+      const: 0.5
+    exponential: # f = base^(exp*d)
+      base: 2.718281828
+      exp: 1.0
+      d_rec: true # take reciprocal of distance before calculating f
+      f_max: 10.0 # limit maximum force
+
+entity:
+  id: "obstacle"
+  type: "point_anchor"
+  position:
+    type: "static_point"
+    x: 0.0
+    y: 1.0
+  potentials:
+    exponential:
+      sign_override: "repell" # f always applied as repelling force
+      base: 2.718281828
+      exp: 1.0
+      d_rec: true
+      f_max: 50.0 # maximum repulsion higher than opponents attraction!
