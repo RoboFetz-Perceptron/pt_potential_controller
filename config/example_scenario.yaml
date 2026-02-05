@@ -11,7 +11,7 @@ anchor:
   position:
     type: "pose_topic"
     topic_name: "/own_pose"
-  result:
+  feedback:
     type: "cmd_vel_topic"
     topic_name: "/cmd_vel"
     rotation_target: "enemy"

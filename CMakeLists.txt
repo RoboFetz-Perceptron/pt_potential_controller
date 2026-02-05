@@ -20,15 +20,16 @@ find_package(tuw_geometry REQUIRED)
 
 
 
-add_executable(potential_controller_node
-  src/potential_main.cpp
-  src/potential_node.cpp
-  src/classes.cpp
-  src/force_sim.cpp
+add_executable(controller_node
+  src/controller_main.cpp
+  src/controller_node.cpp
+  src/anchor.cpp
+  src/potential.cpp
+  src/scenario.cpp
 )
-target_compile_features(potential_controller_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(controller_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
-ament_target_dependencies(potential_controller_node
+ament_target_dependencies(controller_node
   rclcpp
   rclcpp_components
   std_msgs
@@ -37,7 +38,7 @@ ament_target_dependencies(potential_controller_node
   tuw_geometry
 )
 
-install(TARGETS potential_controller_node
+install(TARGETS controller_node
   DESTINATION lib/${PROJECT_NAME})
 
 install(
