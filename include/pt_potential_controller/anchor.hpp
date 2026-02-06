@@ -19,11 +19,21 @@ namespace pt_potential_controller {
 
     class Anchor { // this is an abstract class!
         public:
-            Anchor(std::string type);
+            Anchor(std::string type); // needed to set value of type
             virtual ~Anchor();
 
             const std::string type_;
-            std::vector<std::shared_ptr<Potential>> potentials_;
+            std::vector<PotentialPtr> potentials_;
+
+            // this would be ideal, but templated functions cant be declared virtual/be overloaded
+            //template<typename ... Ts>
+            //virtual void update_position(Ts ... args);
+
+            // workaround: user has to check type and call correct update function :/
+            virtual void update_point(tuw::Point2D p) {(void) p;};
+            virtual void update_pose(tuw::Pose2D p) {(void) p;};
+            virtual void update_line(tuw::Line2D l) {(void) l;};
+            virtual void update_image(cv::Mat img) {(void) img;};
 
             // compute force this anchor exerts onto target point
             virtual std::pair<double, double> force_exerted(tuw::Point2D p) = 0;
@@ -31,57 +41,57 @@ namespace pt_potential_controller {
             // compute force exerted onto this anchor by a of other anchors
             virtual std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) = 0;
 
-            // this would be ideal, but templated functions cant be declared virtual/be overloaded
-            //template<typename ... Ts>
-            //virtual void update_position(Ts ... args);
-
-            // workaround: user has to check type and call correct update function
-            virtual void update_point(tuw::Point2D p) {(void) p;};
-            virtual void update_pose(tuw::Pose2D p) {(void) p;};
-            virtual void update_line(tuw::Line2D l) {(void) l;};
-            virtual void update_image(cv::Mat img) {(void) img;};
+            // visualize this anchor in the given image
+            virtual void draw_anchor(cv::Mat &img, double scale, double cx, double cy) = 0;
     };
+
 
     class PointAnchor : public Anchor {
         public:
             PointAnchor();
-            PointAnchor(tuw::Point2D p);
-            PointAnchor(double x, double y);
+            PointAnchor(tuw::Point2D p, std::vector<PotentialPtr> potentials);
+            PointAnchor(double x, double y, std::vector<PotentialPtr> potentials);
             ~PointAnchor();
+
             tuw::Point2D p_ = tuw::Point2D();
 
+            void update_point(tuw::Point2D p) override;
             std::pair<double, double> force_exerted(tuw::Point2D p) override;
             std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) override;
-            void update_point(tuw::Point2D p) override;
+            void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
+            
     };
 
     class PoseAnchor : public Anchor {
         public:
             PoseAnchor();
-            PoseAnchor(tuw::Pose2D p);
-            PoseAnchor(double x, double y, double t);
+            PoseAnchor(tuw::Pose2D p, std::vector<PotentialPtr> potentials);
+            PoseAnchor(double x, double y, double t, std::vector<PotentialPtr> potentials);
             ~PoseAnchor();
+
             tuw::Pose2D p_ = tuw::Pose2D();
 
+            void update_pose(tuw::Pose2D p) override;
             std::pair<double, double> force_exerted(tuw::Point2D p) override;
             std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) override;
-            void update_pose(tuw::Pose2D p) override;
+            void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
     };
 
+    // not implemented:
     class LineAnchor : public Anchor {
         public:
             tuw::Line2D l_ = tuw::Line2D();
 
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
             void update_line(tuw::Line2D l) override;
+            std::pair<double, double> force_exerted(tuw::Point2D p) override;
     };
 
     class ImageAnchor : public Anchor {
         public:
             cv::Mat img_ = cv::Mat();
 
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
             void update_image(cv::Mat img) override;
+            std::pair<double, double> force_exerted(tuw::Point2D p) override;
     };
 
 }
