@@ -51,12 +51,10 @@ void Scenario::draw_forces(cv::Mat &img) {
         for(size_t col = 0; col < vis_width_; col++) {
             std::pair<double, double> f = total_force(tuw::Point2D(wx, wy));
             double f_res = std::sqrt(f.first*f.first + f.second*f.second); // resultant force
-            //std::cout << "before scale:" << f_res << std::endl;
             f_res = std::min(f_res, vis_saturation_)/vis_saturation_; // scale to match bounds
 
 
             // blend pixel with yellow overlay, intensity depending on force at pixel
-            //std::cout << "row:" << row << ", col:" << col << ", f_res:" << f_res << std::endl;
             img.at<cv::Vec3b>(row, col) = (1.0-f_res)*img.at<cv::Vec3b>(row, col) + f_res*cv::Vec3b(0, 255, 255);
             wx += vis_scale_;
         }
@@ -109,9 +107,7 @@ void Scenario::draw(std::string win_name = "APF Planner") {
             std::pair<double, double> f_mouse = total_force(tuw::Point2D(mouse_x_world, mouse_y_world));
             int arrow_x = mouse_coords[0] + f_mouse.first/vis_scale_;
             int arrow_y = mouse_coords[1] - f_mouse.second/vis_scale_;
-            cv::Point2l p1(mouse_coords[0], mouse_coords[1]); // order is a bit sus
-            arrow_x = std::max(0, std::min(arrow_x, img.cols));
-            arrow_y = std::max(0, std::min(arrow_y, img.rows));
+            cv::Point2l p1(mouse_coords[0], mouse_coords[1]);
             cv::Point2l p2(arrow_x, arrow_y);
             cv::arrowedLine(img, p1, p2, cv::Vec3b(0,0,255), 2, 8, 0, 0.05);
 

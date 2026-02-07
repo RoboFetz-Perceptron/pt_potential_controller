@@ -31,7 +31,6 @@ void PointAnchor::update_point(tuw::Point2D p) {
 }
 
 std::pair<double, double> PointAnchor::force_exerted(tuw::Point2D target) {
-    //std::cout << "point force_exerted" << std::endl;
     double dx = target.x() - p_.x();
     double dy = target.y() - p_.y();
     double fx = 0;
@@ -56,8 +55,8 @@ std::pair<double, double> PointAnchor::force_affected(std::vector<AnchorPtr> &an
 }
 
 void PointAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
-    int img_x = (p_.x() + cx)*scale + img.cols/2;
-    int img_y = (p_.y() + cy)*scale + img.rows/2;
+    int img_x = (cx + p_.x())/scale + img.cols/2;
+    int img_y = (cy - p_.y())/scale + img.rows/2;
     if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)
         return; // point is out of bounds
     cv::Point2l p_cv(img_x, img_y);
@@ -119,8 +118,8 @@ std::pair<double, double> PoseAnchor::force_affected(std::vector<AnchorPtr> &anc
 }
 
 void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
-    int img_x = (p_.position().x() + cx)*scale + img.cols/2;
-    int img_y = (p_.position().y() + cy)*scale + img.rows/2;
+    int img_x = (cx + p_.position().x())/scale + img.cols/2;
+    int img_y = (cy - p_.position().y())/scale + img.rows/2;
     if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)
         return; // point is out of bounds
     cv::Point2l p_cv(img_x, img_y);
@@ -130,8 +129,6 @@ void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
     cv::Point2l p1(img_x, img_y);
     int line_end_x = img_x + 6*std::cos(p_.theta());
     int line_end_y = img_y + 6*std::sin(p_.theta());
-    line_end_x = std::max(0, std::min(line_end_x, img.cols));
-    line_end_y = std::max(0, std::min(line_end_y, img.rows));
     cv::Point2l p2(line_end_x, line_end_y);
     cv::line(img, p1, p2, cv::Vec3b(0,0,0));
 }
