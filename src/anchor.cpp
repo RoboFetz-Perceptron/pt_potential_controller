@@ -31,14 +31,14 @@ void PointAnchor::update_point(tuw::Point2D p) {
 }
 
 std::pair<double, double> PointAnchor::force_exerted(tuw::Point2D target) {
-    double dx = target.x() - p_.x();
-    double dy = target.y() - p_.y();
+    tuw::Point2D d = target - p_;
     double fx = 0;
     double fy = 0;
     for(auto pot : potentials_) {
-        std::pair<double, double> f = pot->force(dx, dy);
-        fx += f.first;
-        fy += f.second;
+        double f = pot->force(d.radius());
+        double t = pot->twist_angle(d.angle());
+        fx += f * std::cos(t);
+        fy += f * std::sin(t);
     }
     return std::pair<double, double>(fx, fy);
 }
@@ -93,14 +93,14 @@ void PoseAnchor::update_pose(tuw::Pose2D p) {
 }*/
 
 std::pair<double, double> PoseAnchor::force_exerted(tuw::Point2D target) {
-    double dx = target.x() - p_.x();
-    double dy = target.y() - p_.y();
+    tuw::Point2D d = target - p_.position();
     double fx = 0;
     double fy = 0;
     for(auto pot : potentials_) {
-        std::pair<double, double> f = pot->force(dx, dy);
-        fx += f.first;
-        fy += f.second;
+        double f = pot->force(d.radius());
+        double t = pot->twist_angle(d.angle());
+        fx += f * std::cos(t);
+        fy += f * std::sin(t);
     }
     return std::pair<double, double>(fx, fy);
 }

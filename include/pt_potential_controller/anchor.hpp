@@ -38,7 +38,7 @@ namespace pt_potential_controller {
             // compute force this anchor exerts onto target point
             virtual std::pair<double, double> force_exerted(tuw::Point2D p) = 0;
 
-            // compute force exerted onto this anchor by a of other anchors
+            // compute force exerted onto this anchor by other anchors
             virtual std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) = 0;
 
             // visualize this anchor in the given image

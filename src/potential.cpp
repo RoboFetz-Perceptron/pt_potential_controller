@@ -1,4 +1,5 @@
 #include <potential.hpp>
+#include <iostream>
 
 using namespace pt_potential_controller;
 
@@ -6,6 +7,24 @@ using namespace pt_potential_controller;
 Potential::Potential(std::string type) : type_(type) {}
 Potential::~Potential() = default;
 
+double Potential::preprocess_dist(double d) {
+    double d_prime = d - d_offset_;
+    if(d_invert_)
+        d_prime = 1/d_prime;
+    return d_prime;
+}
+
+double Potential::postprocess_force(double f) {   
+    if(f_sign_override_ < 0 && f > 0)
+        f = -f;
+    if(f_sign_override_ > 0 && f < 0)
+        f = -f;
+    return std::max(f_min_, std::min(f, f_max_));
+}
+
+double Potential::twist_angle(double t) {
+    return t + angle_twist_;
+}
 
 //// LinearPotential ////
 
@@ -14,10 +33,10 @@ LinearPotential::LinearPotential(double lin, double con) : Potential("linear") {
     con_ = con;
 }
 
-std::pair<double, double> LinearPotential::force(double dx, double dy) {
-    double fx = lin_ * dx + con_;
-    double fy = lin_ * dy + con_;
-    return std::pair<double, double>(fx, fy);
+double LinearPotential::force(double d) {
+    double d_prime = preprocess_dist(d);
+    double f = lin_ * d_prime + con_;
+    return postprocess_force(f);
 }
 
 //// ExponentialPotential ////
@@ -27,8 +46,8 @@ ExponentialPotential::ExponentialPotential(double base, double exp) : Potential(
     exp_ = exp;
 }
 
-std::pair<double, double> ExponentialPotential::force(double dx, double dy) {
-    double fx = pow(base_, (exp_ * dx));
-    double fy = pow(base_, (exp_ * dy));
-    return std::pair<double, double>(fx, fy);
+double ExponentialPotential::force(double d) {
+    double d_prime = preprocess_dist(d);
+    double f = pow(base_, (exp_ * d_prime));
+    return postprocess_force(f);
 }
