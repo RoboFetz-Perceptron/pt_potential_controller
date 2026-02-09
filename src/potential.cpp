@@ -19,23 +19,35 @@ double Potential::postprocess_force(double f) {
         f = -f;
     if(f_sign_override_ > 0 && f < 0)
         f = -f;
-    return std::max(f_min_, std::min(f, f_max_));
+    return std::clamp(f, -f_max_, f_max_);
 }
 
 double Potential::twist_angle(double t) {
     return t + angle_twist_;
 }
 
+//// ConstantPotential ////
+
+ConstantPotential::ConstantPotential(double con) : Potential("constant") {
+    con_ = con;
+}
+
+double ConstantPotential::force(double d) {
+    (void) d;
+    //double d_prime = preprocess_dist(d);
+    double f = con_;
+    return postprocess_force(f);
+}
+
 //// LinearPotential ////
 
-LinearPotential::LinearPotential(double lin, double con) : Potential("linear") {
+LinearPotential::LinearPotential(double lin) : Potential("linear") {
     lin_ = lin;
-    con_ = con;
 }
 
 double LinearPotential::force(double d) {
     double d_prime = preprocess_dist(d);
-    double f = lin_ * d_prime + con_;
+    double f = lin_ * d_prime;
     return postprocess_force(f);
 }
 

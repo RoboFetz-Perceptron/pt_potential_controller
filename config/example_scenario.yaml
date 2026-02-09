@@ -8,10 +8,11 @@ anchors:
     feedback:
       type: "cmd_vel_topic"
       topic_name: "/cmd_vel"
-      rotation_target: "enemy"
+      frequency: 10.0
       max_vel_x: 5.0
       max_vel_y: 5.0
       max_vel_w: 5.0
+      rotation_target: "enemy"
       w_pid_p: 1.0
       w_pid_i: 1.0
       w_pid_d: 1.0
@@ -23,9 +24,10 @@ anchors:
       type: "pose_topic"
       topic_name: "/enemy_pose"
     potentials:
-      linear: # f = lin*d + const
-        lin: 1.0
+      constant: # f = const
         const: 0.5
+      linear: # f = lin*d
+        lin: 1.0
       exponential: # f = base^(exp*d)
         base: 2.718281828
         exp: 1.0
@@ -53,7 +55,4 @@ anchors:
     height: 480
     center_x: 0.0 # center of window in world coordinates
     center_y: 0.0
-    saturation: 10.0 # max. force to scale colors for
-    #dt: 1.0
-    
-    
+    f_max: 10.0 # max. force to scale colors for

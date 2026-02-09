@@ -29,10 +29,23 @@ std::pair<double, double> Scenario::total_force(tuw::Point2D target_point) {
     return std::pair<double, double>(fx, fy);
 }
 
+
+void Scenario::set_vis_params(std::string win_name, double scale, double width, double height, double cx, double cy, double saturation) {
+    vis_win_name_ = win_name;
+    vis_scale_ = scale;
+    vis_width_ = width;
+    vis_height_ = height;
+    vis_cx_ = cx;
+    vis_cy_ = cy;
+    vis_saturation_ = saturation;
+}
+
+
+
 std::pair<double, double> Scenario::compute_feedback(std::string anchor_id) {
     AnchorPtr target = anchors_[anchor_id];
     if(target->type_ != "PointAnchor" || target->type_ != "PoseAnchor") {
-        std::cout << "anchor feedback is only supported for PointAnchors and PoseAnchors!" << std::endl;
+        throw std::invalid_argument("anchor feedback is only supported for PointAnchors and PoseAnchors!");
     }
     
     std::vector<AnchorPtr> others;
@@ -43,6 +56,7 @@ std::pair<double, double> Scenario::compute_feedback(std::string anchor_id) {
 
     return anchors_[anchor_id]->force_affected(others);
 }
+
 
 void Scenario::draw_forces(cv::Mat &img) {
     double wy = vis_cy_ + vis_scale_*vis_height_/2 - vis_scale_/2; // world coordinates of pixels (sample at center!)
@@ -76,12 +90,12 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param) {
     }
 }
 
-void Scenario::draw(std::string win_name = "APF Planner") {
+void Scenario::draw() {
     int mouse_coords[2] = {-1, -1};
     do {
         cv::Mat img(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
 
-        // draw grid lines for scale TODO: align to center!
+        // draw grid lines for scale
         for(int i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
             cv::line(img, cv::Point(0, i), cv::Point(vis_width_, i),  cv::Vec3b(128, 128, 128));
         for(int i = vis_height_/2; i > 0; i -= 1/vis_scale_)
@@ -111,13 +125,11 @@ void Scenario::draw(std::string win_name = "APF Planner") {
             cv::Point2l p2(arrow_x, arrow_y);
             cv::arrowedLine(img, p1, p2, cv::Vec3b(0,0,255), 2, 8, 0, 0.05);
 
-            std::cout << "mouse: " << mouse_coords[0] << ", " << mouse_coords[1] << std::endl;
-            std::cout << "force:" << f_mouse.first << ", " << f_mouse.second << std::endl;
-            std::cout << "arrow:" << arrow_x << ", " << arrow_y << std::endl;
+            std::cout << "force: " << f_mouse.first << ", " << f_mouse.second << std::endl;
         }
 
-        cv::namedWindow(win_name);
-        cv::setMouseCallback(win_name, mouse_callback, (void*)mouse_coords);
-        cv::imshow(win_name, img);
+        cv::namedWindow(vis_win_name_);
+        cv::setMouseCallback(vis_win_name_, mouse_callback, (void*)mouse_coords);
+        cv::imshow(vis_win_name_, img);
     } while(cv::waitKey(100) != 32); // break with spacebar
 }

@@ -24,8 +24,7 @@ namespace pt_potential_controller {
             bool d_invert_ = true;
             double d_offset_ = 0.0;
             int f_sign_override_ = 0;
-            double f_min_ = std::numeric_limits<double>::lowest();
-            double f_max_ = std::numeric_limits<double>::max();
+            double f_max_ = 1e9;
             double angle_twist_ = 0.0;
 
             // TODO: create resultant()-function that calls all these and returns Force object?
@@ -36,11 +35,18 @@ namespace pt_potential_controller {
             virtual double force(double d) = 0;
     };
 
+    class ConstantPotential : public Potential {
+        public:
+            ConstantPotential(double con);
+            double con_;
+
+            double force(double d) override;
+    };
+
     class LinearPotential : public Potential {
         public:
-            LinearPotential(double lin, double con);
+            LinearPotential(double lin);
             double lin_;
-            double con_;
 
             double force(double d) override;
     };
