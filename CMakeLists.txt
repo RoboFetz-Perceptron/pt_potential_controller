@@ -5,7 +5,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-include_directories(include/pt_potential_controller)
+
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -17,8 +17,9 @@ find_package(geometry_msgs REQUIRED)
 #find_package(sensor_msgs REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgcodecs imgproc videoio)
 find_package(tuw_geometry REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
-
+include_directories(include/pt_potential_controller ${YAML_CPP_INCLUDE_DIRS})
 
 add_executable(controller_node
   src/controller_main.cpp
@@ -26,9 +27,12 @@ add_executable(controller_node
   src/anchor.cpp
   src/potential.cpp
   src/scenario.cpp
+  src/scenario_loader.cpp
 )
 target_compile_features(controller_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
+# ament_target_dependencies doesnt work for yaml-cpp --> use target_link_libraries
+target_link_libraries(controller_node ${YAML_CPP_LIBRARIES})
 ament_target_dependencies(controller_node
   rclcpp
   rclcpp_components

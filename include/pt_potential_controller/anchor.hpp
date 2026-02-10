@@ -35,6 +35,9 @@ namespace pt_potential_controller {
             virtual void update_line(tuw::Line2D l) {(void) l;};
             virtual void update_image(cv::Mat img) {(void) img;};
 
+            // add a new potential to this anchor
+            void add_potential(PotentialPtr potential);
+
             // compute force this anchor exerts onto target point
             virtual std::pair<double, double> force_exerted(tuw::Point2D p) = 0;
 
@@ -49,6 +52,7 @@ namespace pt_potential_controller {
     class PointAnchor : public Anchor {
         public:
             PointAnchor();
+            PointAnchor(tuw::Point2D p);
             PointAnchor(tuw::Point2D p, std::vector<PotentialPtr> potentials);
             PointAnchor(double x, double y, std::vector<PotentialPtr> potentials);
             ~PointAnchor();
@@ -65,6 +69,7 @@ namespace pt_potential_controller {
     class PoseAnchor : public Anchor {
         public:
             PoseAnchor();
+            PoseAnchor(tuw::Pose2D p);
             PoseAnchor(tuw::Pose2D p, std::vector<PotentialPtr> potentials);
             PoseAnchor(double x, double y, double t, std::vector<PotentialPtr> potentials);
             ~PoseAnchor();

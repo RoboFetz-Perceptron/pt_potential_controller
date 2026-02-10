@@ -18,6 +18,51 @@ Scenario::Scenario(std::map<std::string, AnchorPtr> anchors) {
 }
 
 
+void Scenario::set_vis_params(std::string win_name, double scale, int width, int height, double cx, double cy, double saturation) {
+    vis_win_name_ = win_name;
+    vis_scale_ = scale;
+    vis_width_ = width;
+    vis_height_ = height;
+    vis_cx_ = cx;
+    vis_cy_ = cy;
+    vis_f_max_ = saturation;
+}
+
+void Scenario::set_vis_win_name(std::string win_name) {
+    vis_win_name_ = win_name;
+}
+
+void Scenario::set_vis_win_size(size_t width, size_t height) {
+    vis_width_ = width;
+    vis_height_ = height;
+}
+
+void Scenario::set_vis_scale(double scale) {
+    vis_scale_ = scale;
+}
+
+void Scenario::set_vis_center(double cx, double cy) {
+    vis_cx_ = cx;
+    vis_cy_ = cy;
+}
+
+void Scenario::set_vis_f_max(double f_max) {
+    vis_f_max_ = f_max;
+}
+
+/*void Scenario::add_anchor(std::string anchor_id, Anchor anchor) {
+    anchors_[anchor_id] = std::make_shared<Anchor>(anchor);
+}*/
+
+void Scenario::add_anchor(std::string anchor_id, AnchorPtr anchor) {
+    anchors_[anchor_id] = anchor;
+}
+
+void Scenario::add_potential(std::string anchor_id, PotentialPtr potential) {
+    anchors_[anchor_id]->add_potential(potential);
+}
+
+
 std::pair<double, double> Scenario::total_force(tuw::Point2D target_point) {
     double fx = 0;
     double fy = 0;
@@ -28,18 +73,6 @@ std::pair<double, double> Scenario::total_force(tuw::Point2D target_point) {
     }
     return std::pair<double, double>(fx, fy);
 }
-
-
-void Scenario::set_vis_params(std::string win_name, double scale, double width, double height, double cx, double cy, double saturation) {
-    vis_win_name_ = win_name;
-    vis_scale_ = scale;
-    vis_width_ = width;
-    vis_height_ = height;
-    vis_cx_ = cx;
-    vis_cy_ = cy;
-    vis_saturation_ = saturation;
-}
-
 
 
 std::pair<double, double> Scenario::compute_feedback(std::string anchor_id) {
@@ -65,7 +98,7 @@ void Scenario::draw_forces(cv::Mat &img) {
         for(size_t col = 0; col < vis_width_; col++) {
             std::pair<double, double> f = total_force(tuw::Point2D(wx, wy));
             double f_res = std::sqrt(f.first*f.first + f.second*f.second); // resultant force
-            f_res = std::min(f_res, vis_saturation_)/vis_saturation_; // scale to match bounds
+            f_res = std::min(f_res, vis_f_max_)/vis_f_max_; // scale to match bounds
 
 
             // blend pixel with yellow overlay, intensity depending on force at pixel
@@ -92,17 +125,18 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param) {
 
 void Scenario::draw() {
     int mouse_coords[2] = {-1, -1};
+    std::cout << vis_height_ << vis_width_ << std::endl;
     do {
         cv::Mat img(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
 
         // draw grid lines for scale
-        for(int i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
+        for(size_t i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
             cv::line(img, cv::Point(0, i), cv::Point(vis_width_, i),  cv::Vec3b(128, 128, 128));
-        for(int i = vis_height_/2; i > 0; i -= 1/vis_scale_)
+        for(size_t i = vis_height_/2; i > 0; i -= 1/vis_scale_)
             cv::line(img, cv::Point(0, i), cv::Point(vis_width_, i),  cv::Vec3b(128, 128, 128));
-        for(int i = vis_width_/2; i < vis_width_; i += 1/vis_scale_)
+        for(size_t i = vis_width_/2; i < vis_width_; i += 1/vis_scale_)
             cv::line(img, cv::Point(i, 0), cv::Point(i, vis_height_), cv::Vec3b(128, 128, 128));
-        for(int i = vis_width_/2; i > 0; i -= 1/vis_scale_)
+        for(size_t i = vis_width_/2; i > 0; i -= 1/vis_scale_)
             cv::line(img, cv::Point(i, 0), cv::Point(i, vis_height_), cv::Vec3b(128, 128, 128));
 
         // visualize intensity of forces
@@ -133,3 +167,6 @@ void Scenario::draw() {
         cv::imshow(vis_win_name_, img);
     } while(cv::waitKey(100) != 32); // break with spacebar
 }
+
+
+

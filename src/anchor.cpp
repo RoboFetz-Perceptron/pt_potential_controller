@@ -6,11 +6,20 @@ using namespace pt_potential_controller;
 Anchor::Anchor(std::string type) : type_(type) {}
 Anchor::~Anchor() = default;
 
+void Anchor::add_potential(PotentialPtr potential) {
+    potentials_.push_back(potential);
+}
+
 
 //// PointAnchor ////
 
 PointAnchor::PointAnchor() : Anchor("point") {
     p_ = tuw::Point2D();
+    potentials_ = {};
+}
+
+PointAnchor::PointAnchor(tuw::Point2D p) : Anchor("point") {
+    p_ = p;
     potentials_ = {};
 }
 
@@ -69,6 +78,11 @@ void PointAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) 
 
 PoseAnchor::PoseAnchor() : Anchor("pose") {
     p_ = tuw::Pose2D(0.0, 0.0, 0.0);
+    potentials_ = {};
+}
+
+PoseAnchor::PoseAnchor(tuw::Pose2D p) : Anchor("point") {
+    p_ = p;
     potentials_ = {};
 }
 
