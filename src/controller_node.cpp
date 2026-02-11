@@ -4,29 +4,74 @@
 using namespace pt_potential_controller;
 
 PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : Node("potential_controller_node", options) {
-    /*
-    // goal
-    ConstantPotential p0_0(-0.25);
-    LinearPotential p0_1(-1.0);
-    std::vector<PotentialPtr> p0 = {std::make_shared<ConstantPotential>(p0_0), std::make_shared<LinearPotential>(p0_1)};
-    PointAnchor a0(1.0, -1.0, p0);
+    {
+        auto descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        scenario_path_ = this->declare_parameter<std::string>("scenario_path", "/home/arc/projects/robofetz/ws02/src/pt_potential_controller/config/example_scenario.yaml", descriptor);
 
-    // obstacle
-    LinearPotential p1_0(0.5);
-    std::vector<PotentialPtr> p1 = {std::make_shared<LinearPotential>(p1_0)};
-    PointAnchor a1(0.0, 0.0, p1);
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        control_anchor_ = this->declare_parameter<std::string>("controlled_anchor", "perceptron", descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        rotation_target_ = this->declare_parameter<std::string>("rotation_target_anchor", "enemy", descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        freq_ = this->declare_parameter<double>("frequency", 10.0, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        w_pid_p_ = this->declare_parameter<double>("w_pid_p", 1.0, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        w_pid_i_ = this->declare_parameter<double>("w_pid_i", 0.1, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        w_pid_d_ = this->declare_parameter<double>("w_pid_d", 0.1, descriptor);
+    }
 
 
-    std::vector<AnchorPtr> a = {std::make_shared<PointAnchor>(a0), std::make_shared<PointAnchor>(a1)};
-    Scenario s(a);
+    twist_publisher_ = this->create_publisher<TwistMsg>("cmd_vel", 10);
+    twist_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0/freq_), std::bind(&PotentialControllerNode::control_loop, this));
 
-    s.draw();
-    */
+    load_scenario_server_ = create_service<LoadScenarioSrv>("potential_controller_node/load_scenario",
+        [this](const std::shared_ptr<LoadScenarioSrv::Request> request, std::shared_ptr<LoadScenarioSrv::Response> response) {
+            response->success = load_scenario(request->scenario_path);
+        }
+        //std::bind(&PoseTransformerNode::callback_lock, this, _1, _2)
+    );
 
-    load_scenario("/home/arc/projects/robofetz/ws02/src/pt_potential_controller/config/example_scenario.yaml");
-    scenario_->draw();
-    rclcpp::shutdown();
+    load_scenario(scenario_path_);
+
+    //std::thread t(control_loop);
+    //vis_thread_ = std::make_unique<std::thread>(t);
+    
+    //scenario_->draw();
+    //rclcpp::shutdown();
 }
+
+
+void PotentialControllerNode::control_loop() {
+    std::pair<double, double> xy = scenario_->compute_feedback(control_anchor_);
+    //RCLCPP_INFO(this->get_logger(), "LOOP, x: %s y: %s w: %s", );
+    TwistMsg msg;
+    msg.linear.x = xy.first;
+    msg.linear.y = xy.second;
+    // TODO: rotation command/PID
+    twist_publisher_->publish(msg);
+}
+
+
+/*void PoseTransformerNode::callback_lock(const std::shared_ptr<LoadScenarioSrv::Request> request,
+                                              std::shared_ptr<LoadScenarioSrv::Response> response) {
+    response->success = load_scenario(request->scenario_path);
+}*/
+
 
 
 bool PotentialControllerNode::load_scenario(std::string path) {
@@ -40,25 +85,12 @@ bool PotentialControllerNode::load_scenario(std::string path) {
         BindingVec loaded_in_bindings;
         BindingVec loaded_out_bindings;
         for(std::pair<YAML::Node, YAML::Node> file_child : file_root) {
-            if(file_child.first.as<std::string>() == "anchors") {
-                load_anchors(file_child.second, loaded_scenario, loaded_in_bindings, loaded_out_bindings);
-            }
-            else if(file_child.first.as<std::string>() == "visualization") {
-                YAML::Node vis_map = file_child.second;
-                if(vis_map["win_name"])
-                    loaded_scenario.set_vis_win_name(vis_map["win_name"].as<std::string>());
-                if(vis_map["scale"])
-                    loaded_scenario.set_vis_scale(vis_map["scale"].as<double>());
-                if(vis_map["width"] && vis_map["height"])
-                    loaded_scenario.set_vis_win_size(vis_map["width"].as<size_t>(), vis_map["height"].as<size_t>());
-                if(vis_map["center_x"] && vis_map["center_y"])
-                    loaded_scenario.set_vis_center(vis_map["center_x"].as<double>(), vis_map["center_y"].as<double>());
-                if(vis_map["saturation"])
-                    loaded_scenario.set_vis_f_max(vis_map["f_max"].as<double>());
-            }
-            else {
+            if(file_child.first.as<std::string>() == "anchors")
+                load_anchors(file_child.second, loaded_scenario);//, loaded_in_bindings, loaded_out_bindings);
+            else if(file_child.first.as<std::string>() == "visualization")
+                load_vis(file_child.second, loaded_scenario);
+            else
                 throw std::runtime_error("Root node is not a mapping containing either \"anchors\" or \"visualization\"");
-            }
         }
         RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
         scenario_ = std::make_shared<Scenario>(loaded_scenario);
@@ -71,10 +103,10 @@ bool PotentialControllerNode::load_scenario(std::string path) {
     }
 }
 
-void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario, BindingVec &in_bindings, BindingVec &out_bindings) {
+void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario) { //, BindingVec &in_bindings, BindingVec &out_bindings) {
     if(!anchors_map.IsMap())
         throw std::runtime_error("Anchor node is not a mapping");
-    std::cout << anchors_map << std::endl;
+    //std::cout << anchors_map << std::endl;
 
     for(std::pair<YAML::Node, YAML::Node> anchor_node : anchors_map) {
         std::string anchor_type = anchor_node.first.as<std::string>();
@@ -91,6 +123,15 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
             else {
                 throw std::runtime_error("Parameters missing!"); // TODO: initialize anchor as disabled instead
             }
+            if(anchor_children["pos_topic"]) {
+                auto sub = this->create_subscription<PointMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
+                    [this, loaded](const PointMsg::SharedPtr msg) {
+                        loaded->update_point(tuw::Point2D(msg->x, msg->y));
+                    }
+                );
+                //::SharedPtr
+                subs_.push_back(sub);
+            }
         } else if(anchor_type == "pose") {
             loaded = std::make_shared<PoseAnchor>(PoseAnchor());
             if(anchor_children["pos_x"] && anchor_children["pos_x"] && anchor_children["pos_t"]) {
@@ -99,6 +140,14 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
             }
             else {
                 throw std::runtime_error("Parameters missing!"); // TODO: initialize anchor as disabled instead
+            }
+            if(anchor_children["pos_topic"]) {
+                auto sub = this->create_subscription<PoseMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
+                    [this, loaded](const PoseMsg::SharedPtr msg) {
+                        loaded->update_pose(tuw::Pose2D(msg->position.x, msg->position.y, tuw::QuaternionToYaw(msg->orientation)));
+                    }
+                );
+                subs_.push_back(sub);
             }
         } else if(anchor_type == "line") {
             throw std::runtime_error("Line anchors not implemented");
@@ -109,16 +158,8 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         }
 
         // add optional traits
-        if(anchor_children["potentials"]) {
+        if(anchor_children["potentials"])
             load_potentials(anchor_children["potentials"], loaded);
-        }
-
-        // TODO: Bindings to ROS topics
-        //if(anchor_children["in_bindings"]) {
-        //    for()
-        //}
-        //loaded_in_bindings.push_back();
-
         
         std::string anchor_id;
         if(anchor_children["id"])
@@ -137,7 +178,6 @@ void PotentialControllerNode::load_potentials(YAML::Node potentials_map, AnchorP
         std::string potential_type = potential_node.first.as<std::string>();
         YAML::Node potential_children = potential_node.second;
         PotentialPtr loaded;
-        std::cout << potential_type << std::endl;
         if(potential_type == "constant") {
             if(!potential_children["const"])
                 throw std::runtime_error("Constant potential missing parameter \"const\"");
@@ -172,4 +212,17 @@ void PotentialControllerNode::load_potentials(YAML::Node potentials_map, AnchorP
 
         anchor->add_potential(loaded);
     }
+}
+
+void PotentialControllerNode::load_vis(YAML::Node vis_map, Scenario &scenario) {
+    if(vis_map["win_name"])
+        scenario.set_vis_win_name(vis_map["win_name"].as<std::string>());
+    if(vis_map["scale"])
+        scenario.set_vis_scale(vis_map["scale"].as<double>());
+    if(vis_map["width"] && vis_map["height"])
+        scenario.set_vis_win_size(vis_map["width"].as<size_t>(), vis_map["height"].as<size_t>());
+    if(vis_map["center_x"] && vis_map["center_y"])
+        scenario.set_vis_center(vis_map["center_x"].as<double>(), vis_map["center_y"].as<double>());
+    if(vis_map["saturation"])
+        scenario.set_vis_f_max(vis_map["f_max"].as<double>());
 }

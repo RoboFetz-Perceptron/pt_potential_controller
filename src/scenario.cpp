@@ -77,7 +77,7 @@ std::pair<double, double> Scenario::total_force(tuw::Point2D target_point) {
 
 std::pair<double, double> Scenario::compute_feedback(std::string anchor_id) {
     AnchorPtr target = anchors_[anchor_id];
-    if(target->type_ != "PointAnchor" || target->type_ != "PoseAnchor") {
+    if(target->type_ != "point" && target->type_ != "pose") {
         throw std::invalid_argument("anchor feedback is only supported for PointAnchors and PoseAnchors!");
     }
     

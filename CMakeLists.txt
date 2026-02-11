@@ -18,6 +18,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(OpenCV REQUIRED COMPONENTS core highgui imgcodecs imgproc videoio)
 find_package(tuw_geometry REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(pt_msgs)
 
 include_directories(include/pt_potential_controller ${YAML_CPP_INCLUDE_DIRS})
 
@@ -40,6 +41,7 @@ ament_target_dependencies(controller_node
   geometry_msgs
   OpenCV
   tuw_geometry
+  pt_msgs
 )
 
 install(TARGETS controller_node
