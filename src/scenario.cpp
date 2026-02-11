@@ -125,7 +125,6 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param) {
 
 void Scenario::draw() {
     int mouse_coords[2] = {-1, -1};
-    std::cout << vis_height_ << vis_width_ << std::endl;
     do {
         cv::Mat img(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
 

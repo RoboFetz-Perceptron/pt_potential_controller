@@ -45,7 +45,7 @@ std::pair<double, double> PointAnchor::force_exerted(tuw::Point2D target) {
     double fy = 0;
     for(auto pot : potentials_) {
         double f = pot->force(d.radius());
-        double t = pot->twist_angle(d.angle());
+        double t = d.angle() + pot->rho_twist_; // TODO: do force and angle in a single function call
         fx += f * std::cos(t);
         fy += f * std::sin(t);
     }
@@ -112,7 +112,7 @@ std::pair<double, double> PoseAnchor::force_exerted(tuw::Point2D target) {
     double fy = 0;
     for(auto pot : potentials_) {
         double f = pot->force(d.radius());
-        double t = pot->twist_angle(d.angle());
+        double t = d.angle() + pot->rho_twist_; // TODO: do force and angle in a single function call
         fx += f * std::cos(t);
         fy += f * std::sin(t);
     }
@@ -142,7 +142,7 @@ void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
 
     cv::Point2l p1(img_x, img_y);
     int line_end_x = img_x + 6*std::cos(p_.theta());
-    int line_end_y = img_y + 6*std::sin(p_.theta());
+    int line_end_y = img_y - 6*std::sin(p_.theta());
     cv::Point2l p2(line_end_x, line_end_y);
     cv::line(img, p1, p2, cv::Vec3b(0,0,0));
 }

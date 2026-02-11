@@ -25,13 +25,12 @@ namespace pt_potential_controller {
             double d_offset_ = 0.0;
             int f_sign_override_ = 0;
             double f_max_ = 1e9;
-            double angle_twist_ = 0.0;
+            double rho_twist_ = 0.0;
 
             // TODO: create resultant()-function that calls all these and returns Force object?
             //Force resultant(double d, double rho);
             double preprocess_dist(double d);
             double postprocess_force(double d);
-            double twist_angle(double t);
             virtual double force(double d) = 0;
     };
 

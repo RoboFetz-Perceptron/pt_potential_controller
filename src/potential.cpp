@@ -22,10 +22,6 @@ double Potential::postprocess_force(double f) {
     return std::clamp(f, -f_max_, f_max_);
 }
 
-double Potential::twist_angle(double t) {
-    return t + angle_twist_;
-}
-
 //// ConstantPotential ////
 
 ConstantPotential::ConstantPotential(double con) : Potential("constant") {

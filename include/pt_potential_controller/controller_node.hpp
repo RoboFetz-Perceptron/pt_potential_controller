@@ -16,7 +16,8 @@
 
 namespace pt_potential_controller {
 
-    using BindingVec = std::vector<std::pair<std::string, AnchorPtr>>;
+    using Binding = std::tuple<AnchorPtr, std::string, std::string>; // anchor, type, topic
+    using BindingVec = std::vector<Binding>;
     using BindingVecPtr = std::shared_ptr<BindingVec>;
 
     class PotentialControllerNode : public rclcpp::Node {
