@@ -40,6 +40,7 @@ void PointAnchor::update_point(tuw::Point2D p) {
 }
 
 std::pair<double, double> PointAnchor::force_exerted(tuw::Point2D target) {
+    if(!enabled_) return std::pair<double, double>(0.0, 0.0);
     tuw::Point2D d = target - p_;
     double fx = 0;
     double fy = 0;
@@ -102,11 +103,8 @@ void PoseAnchor::update_pose(tuw::Pose2D p) {
     p_ = p;
 }
 
-/*void PoseAnchor::update_pose(double x, double y, double t) {
-    p_.set(x, y, t);
-}*/
-
 std::pair<double, double> PoseAnchor::force_exerted(tuw::Point2D target) {
+    if(!enabled_) return std::pair<double, double>(0.0, 0.0);
     tuw::Point2D d = target - p_.position();
     double fx = 0;
     double fy = 0;

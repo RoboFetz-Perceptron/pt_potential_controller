@@ -124,10 +124,19 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param) {
 }
 
 void Scenario::draw() {
-    int mouse_coords[2] = {-1, -1};
-    do {
-        cv::Mat img(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
+    static int mouse_coords[2] = {-1, -1};
+    static cv::Mat prev_base_img(1, 1, CV_8UC1); // default size 1 pixel to recognize first call to draw()
 
+    bool anchors_changed = false;
+    for(auto [_, ptr] : anchors_) {
+        anchors_changed = ptr->updated_ ? true : anchors_changed;
+        ptr->updated_ = false;
+    }
+
+    // draw underlay
+    cv::Mat img;
+    if(anchors_changed || prev_base_img.size[0] == 1) { // need to redraw entire image
+        img = cv::Mat(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
         // draw grid lines for scale
         for(size_t i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
             cv::line(img, cv::Point(0, i), cv::Point(vis_width_, i),  cv::Vec3b(128, 128, 128));
@@ -145,26 +154,29 @@ void Scenario::draw() {
         for(auto [_, ptr] : anchors_) {
             ptr->draw_anchor(img, vis_scale_, vis_cx_, vis_cy_);
         }
+        prev_base_img = img.clone();
+    } else { // re-use force/anchor visualization from last frame
+        img = prev_base_img.clone();
+    }
 
-        // interactively show force vector at mouse position
-        if(mouse_coords[0] > 0) {
-            // TODO: make this less messy
-            double mouse_x_world = vis_cx_ - vis_scale_*vis_width_/2  + vis_scale_/2 + mouse_coords[0]*vis_scale_;
-            double mouse_y_world = vis_cy_ + vis_scale_*vis_height_/2 - vis_scale_/2 - mouse_coords[1]*vis_scale_;
-            std::pair<double, double> f_mouse = total_force(tuw::Point2D(mouse_x_world, mouse_y_world));
-            int arrow_x = mouse_coords[0] + f_mouse.first/vis_scale_;
-            int arrow_y = mouse_coords[1] - f_mouse.second/vis_scale_;
-            cv::Point2l p1(mouse_coords[0], mouse_coords[1]);
-            cv::Point2l p2(arrow_x, arrow_y);
-            cv::arrowedLine(img, p1, p2, cv::Vec3b(0,0,255), 2, 8, 0, 0.05);
+    // interactively show force vector at mouse position
+    if(mouse_coords[0] > 0) {
+        // TODO: make this less messy
+        double mouse_x_world = vis_cx_ - vis_scale_*vis_width_/2  + vis_scale_/2 + mouse_coords[0]*vis_scale_;
+        double mouse_y_world = vis_cy_ + vis_scale_*vis_height_/2 - vis_scale_/2 - mouse_coords[1]*vis_scale_;
+        std::pair<double, double> f_mouse = total_force(tuw::Point2D(mouse_x_world, mouse_y_world));
+        int arrow_x = mouse_coords[0] + f_mouse.first/vis_scale_;
+        int arrow_y = mouse_coords[1] - f_mouse.second/vis_scale_;
+        cv::Point2l p1(mouse_coords[0], mouse_coords[1]);
+        cv::Point2l p2(arrow_x, arrow_y);
+        cv::arrowedLine(img, p1, p2, cv::Vec3b(0,0,255), 2, 8, 0, 0.05);
+        std::cout << "force: " << f_mouse.first << ", " << f_mouse.second << std::endl;
+    }
 
-            std::cout << "force: " << f_mouse.first << ", " << f_mouse.second << std::endl;
-        }
-
-        cv::namedWindow(vis_win_name_);
-        cv::setMouseCallback(vis_win_name_, mouse_callback, (void*)mouse_coords);
-        cv::imshow(vis_win_name_, img);
-    } while(cv::waitKey(100) != 32); // break with spacebar
+    cv::namedWindow(vis_win_name_);
+    cv::setMouseCallback(vis_win_name_, mouse_callback, (void*)mouse_coords);
+    cv::imshow(vis_win_name_, img);
+    cv::waitKey(1);
 }
 
 

@@ -24,6 +24,8 @@ namespace pt_potential_controller {
 
             const std::string type_;
             std::vector<PotentialPtr> potentials_;
+            bool enabled_ = true;
+            bool updated_ = true; // set if anchor has been updated since last "relevant" computation
 
             // this would be ideal, but templated functions cant be declared virtual/be overloaded
             //template<typename ... Ts>

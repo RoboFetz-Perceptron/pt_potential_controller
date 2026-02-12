@@ -33,6 +33,10 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
         w_pid_d_ = this->declare_parameter<double>("w_pid_d", 0.1, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        vis_enabled_ = this->declare_parameter<bool>("vis_enabled", true, descriptor);
     }
 
 
@@ -43,34 +47,26 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         [this](const std::shared_ptr<LoadScenarioSrv::Request> request, std::shared_ptr<LoadScenarioSrv::Response> response) {
             response->success = load_scenario(request->scenario_path);
         }
-        //std::bind(&PoseTransformerNode::callback_lock, this, _1, _2)
     );
 
     load_scenario(scenario_path_);
-
-    //std::thread t(control_loop);
-    //vis_thread_ = std::make_unique<std::thread>(t);
-    
-    //scenario_->draw();
-    //rclcpp::shutdown();
 }
 
 
 void PotentialControllerNode::control_loop() {
     std::pair<double, double> xy = scenario_->compute_feedback(control_anchor_);
-    //RCLCPP_INFO(this->get_logger(), "LOOP, x: %s y: %s w: %s", );
     TwistMsg msg;
     msg.linear.x = xy.first;
     msg.linear.y = xy.second;
+
     // TODO: rotation command/PID
+
+    RCLCPP_INFO(this->get_logger(), "LOOP, x: %lf y: %lf w: %lf", msg.linear.x, msg.linear.y, msg.angular.z);
     twist_publisher_->publish(msg);
+
+    if(vis_enabled_)
+        scenario_->draw(); // warning: this blocks for at least 1ms --> make sure this does not mess with timer too much!
 }
-
-
-/*void PoseTransformerNode::callback_lock(const std::shared_ptr<LoadScenarioSrv::Request> request,
-                                              std::shared_ptr<LoadScenarioSrv::Response> response) {
-    response->success = load_scenario(request->scenario_path);
-}*/
 
 
 
@@ -86,7 +82,7 @@ bool PotentialControllerNode::load_scenario(std::string path) {
         BindingVec loaded_out_bindings;
         for(std::pair<YAML::Node, YAML::Node> file_child : file_root) {
             if(file_child.first.as<std::string>() == "anchors")
-                load_anchors(file_child.second, loaded_scenario);//, loaded_in_bindings, loaded_out_bindings);
+                load_anchors(file_child.second, loaded_scenario);
             else if(file_child.first.as<std::string>() == "visualization")
                 load_vis(file_child.second, loaded_scenario);
             else
@@ -103,7 +99,7 @@ bool PotentialControllerNode::load_scenario(std::string path) {
     }
 }
 
-void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario) { //, BindingVec &in_bindings, BindingVec &out_bindings) {
+void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario) {
     if(!anchors_map.IsMap())
         throw std::runtime_error("Anchor node is not a mapping");
     //std::cout << anchors_map << std::endl;
@@ -125,11 +121,12 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
             }
             if(anchor_children["pos_topic"]) {
                 auto sub = this->create_subscription<PointMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
-                    [this, loaded](const PointMsg::SharedPtr msg) {
+                    [this, loaded, scenario](const PointMsg::SharedPtr msg) {
                         loaded->update_point(tuw::Point2D(msg->x, msg->y));
+                        loaded->enabled_ = true;
+                        loaded->updated_ = true;
                     }
                 );
-                //::SharedPtr
                 subs_.push_back(sub);
             }
         } else if(anchor_type == "pose") {
@@ -143,8 +140,10 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
             }
             if(anchor_children["pos_topic"]) {
                 auto sub = this->create_subscription<PoseMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
-                    [this, loaded](const PoseMsg::SharedPtr msg) {
+                    [this, loaded, scenario](const PoseMsg::SharedPtr msg) {
                         loaded->update_pose(tuw::Pose2D(msg->position.x, msg->position.y, tuw::QuaternionToYaw(msg->orientation)));
+                        loaded->enabled_ = true;
+                        loaded->updated_ = true;
                     }
                 );
                 subs_.push_back(sub);

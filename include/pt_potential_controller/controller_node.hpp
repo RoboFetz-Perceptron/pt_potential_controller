@@ -51,6 +51,7 @@ namespace pt_potential_controller {
             double w_pid_p_ = 1.0;
             double w_pid_i_ = 0.1;
             double w_pid_d_ = 0.1;
+            bool vis_enabled_ = true;
 
 
             // ROS interfaces
@@ -63,6 +64,7 @@ namespace pt_potential_controller {
 
         
         private:
+            bool anchors_updated_ = true;
             void control_loop();
 
             bool load_scenario(std::string path);
