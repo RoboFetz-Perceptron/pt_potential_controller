@@ -39,32 +39,28 @@ void PointAnchor::update_point(tuw::Point2D p) {
     p_ = p;
 }
 
-std::pair<double, double> PointAnchor::force_exerted(tuw::Point2D target) {
-    if(!enabled_) return std::pair<double, double>(0.0, 0.0);
-    tuw::Point2D d = target - p_;
-    double fx = 0;
-    double fy = 0;
+Force PointAnchor::force_exerted(tuw::Point2D target) {
+    if(!enabled_) return Force(0.0, 0.0);
+    tuw::Point2D diff = target - p_;
+    Force f_total = Force(0.0, 0.0);
     for(auto pot : potentials_) {
-        double f = pot->force(d.radius());
-        double t = d.angle() + pot->rho_twist_; // TODO: do force and angle in a single function call
-        fx += f * std::cos(t);
-        fy += f * std::sin(t);
+        Force f = pot->resultant(diff);
+        f_total = f_total + f;
     }
-    return std::pair<double, double>(fx, fy);
+    return f_total;
 }
 
-std::pair<double, double> PointAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
-    double fx = 0;
-    double fy = 0;
+Force PointAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
+    Force f_total = Force(0.0, 0.0);
     for(auto anchor : anchors) {
-        std::pair<double, double> f = anchor->force_exerted(p_);
-        fx += f.first;
-        fy += f.second;
+        Force f = anchor->force_exerted(p_);
+        f_total = f_total + f;
     }
-    return std::pair<double, double>(fx, fy);
+    return f_total;
 }
 
 void PointAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
+    if(!enabled_) return;
     int img_x = (cx + p_.x())/scale + img.cols/2;
     int img_y = (cy - p_.y())/scale + img.rows/2;
     if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)
@@ -103,33 +99,28 @@ void PoseAnchor::update_pose(tuw::Pose2D p) {
     p_ = p;
 }
 
-std::pair<double, double> PoseAnchor::force_exerted(tuw::Point2D target) {
-    if(!enabled_) return std::pair<double, double>(0.0, 0.0);
-    tuw::Point2D d = target - p_.position();
-    double fx = 0;
-    double fy = 0;
+Force PoseAnchor::force_exerted(tuw::Point2D target) {
+    if(!enabled_) return Force(0.0, 0.0);
+    tuw::Point2D diff = target - p_.position();
+    Force f_total = Force(0.0, 0.0);
     for(auto pot : potentials_) {
-        double f = pot->force(d.radius());
-        double t = d.angle() + pot->rho_twist_; // TODO: do force and angle in a single function call
-        fx += f * std::cos(t);
-        fy += f * std::sin(t);
+        Force f = pot->resultant(diff);
+        f_total = f_total + f;
     }
-    return std::pair<double, double>(fx, fy);
+    return f_total;
 }
 
-// TODO: output fx, fy in relation to pose orientation instead of world coordinates
-std::pair<double, double> PoseAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
-    double fx = 0;
-    double fy = 0;
+Force PoseAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
+    Force f_total = Force(0.0, 0.0);
     for(auto anchor : anchors) {
-        std::pair<double, double> f = anchor->force_exerted(tuw::Point2D(p_.position()));
-        fx += f.first;
-        fy += f.second;
+        Force f = anchor->force_exerted(p_.position());
+        f_total = f_total + f;
     }
-    return std::pair<double, double>(fx, fy);
+    return Force(f_total.abs(), f_total.angle()-p_.get_theta());
 }
 
 void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
+    if(!enabled_) return;
     int img_x = (cx + p_.position().x())/scale + img.cols/2;
     int img_y = (cy - p_.position().y())/scale + img.rows/2;
     if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)

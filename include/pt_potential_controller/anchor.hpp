@@ -41,10 +41,10 @@ namespace pt_potential_controller {
             void add_potential(PotentialPtr potential);
 
             // compute force this anchor exerts onto target point
-            virtual std::pair<double, double> force_exerted(tuw::Point2D p) = 0;
+            virtual Force force_exerted(tuw::Point2D p) = 0;
 
             // compute force exerted onto this anchor by other anchors
-            virtual std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) = 0;
+            virtual Force force_affected(std::vector<AnchorPtr> &anchors) = 0;
 
             // visualize this anchor in the given image
             virtual void draw_anchor(cv::Mat &img, double scale, double cx, double cy) = 0;
@@ -62,8 +62,8 @@ namespace pt_potential_controller {
             tuw::Point2D p_ = tuw::Point2D();
 
             void update_point(tuw::Point2D p) override;
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
-            std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) override;
+            Force force_exerted(tuw::Point2D p) override;
+            Force force_affected(std::vector<AnchorPtr> &anchors) override;
             void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
             
     };
@@ -79,8 +79,8 @@ namespace pt_potential_controller {
             tuw::Pose2D p_ = tuw::Pose2D();
 
             void update_pose(tuw::Pose2D p) override;
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
-            std::pair<double, double> force_affected(std::vector<AnchorPtr> &anchors) override;
+            Force force_exerted(tuw::Point2D p) override;
+            Force force_affected(std::vector<AnchorPtr> &anchors) override;
             void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
     };
 
@@ -90,7 +90,7 @@ namespace pt_potential_controller {
             tuw::Line2D l_ = tuw::Line2D();
 
             void update_line(tuw::Line2D l) override;
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
+            Force force_exerted(tuw::Point2D p) override;
     };
 
     class ImageAnchor : public Anchor {
@@ -98,7 +98,7 @@ namespace pt_potential_controller {
             cv::Mat img_ = cv::Mat();
 
             void update_image(cv::Mat img) override;
-            std::pair<double, double> force_exerted(tuw::Point2D p) override;
+            Force force_exerted(tuw::Point2D p) override;
     };
 
 }

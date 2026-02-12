@@ -63,19 +63,17 @@ void Scenario::add_potential(std::string anchor_id, PotentialPtr potential) {
 }
 
 
-std::pair<double, double> Scenario::total_force(tuw::Point2D target_point) {
-    double fx = 0;
-    double fy = 0;
+Force Scenario::total_force(tuw::Point2D target_point) {
+    Force f_total(0.0, 0.0);
     for(auto [_, ptr] : anchors_) {
-        std::pair<double, double> f = ptr->force_exerted(target_point);
-        fx += f.first;
-        fy += f.second;
+        Force f = ptr->force_exerted(target_point);
+        f_total = f_total + f;
     }
-    return std::pair<double, double>(fx, fy);
+    return f_total;
 }
 
 
-std::pair<double, double> Scenario::compute_feedback(std::string anchor_id) {
+Force Scenario::compute_feedback(std::string anchor_id) {
     AnchorPtr target = anchors_[anchor_id];
     if(target->type_ != "point" && target->type_ != "pose") {
         throw std::invalid_argument("anchor feedback is only supported for PointAnchors and PoseAnchors!");
@@ -96,13 +94,11 @@ void Scenario::draw_forces(cv::Mat &img) {
     for(size_t row = 0; row < vis_height_; row++) {
         double wx = vis_cx_ - vis_scale_*vis_width_/2  + vis_scale_/2;
         for(size_t col = 0; col < vis_width_; col++) {
-            std::pair<double, double> f = total_force(tuw::Point2D(wx, wy));
-            double f_res = std::sqrt(f.first*f.first + f.second*f.second); // resultant force
-            f_res = std::min(f_res, vis_f_max_)/vis_f_max_; // scale to match bounds
-
+            Force f = total_force(tuw::Point2D(wx, wy));
+            double f_draw = std::min(f.abs(), vis_f_max_)/vis_f_max_; // scale to match bounds
 
             // blend pixel with yellow overlay, intensity depending on force at pixel
-            img.at<cv::Vec3b>(row, col) = (1.0-f_res)*img.at<cv::Vec3b>(row, col) + f_res*cv::Vec3b(0, 255, 255);
+            img.at<cv::Vec3b>(row, col) = (1.0-f_draw)*img.at<cv::Vec3b>(row, col) + f_draw*cv::Vec3b(0, 255, 255);
             wx += vis_scale_;
         }
         wy -= vis_scale_;
@@ -124,8 +120,9 @@ void mouse_callback(int  event, int  x, int  y, int  flag, void *param) {
 }
 
 void Scenario::draw() {
+    static bool first_draw = true;
     static int mouse_coords[2] = {-1, -1};
-    static cv::Mat prev_base_img(1, 1, CV_8UC1); // default size 1 pixel to recognize first call to draw()
+    static cv::Mat prev_base_img;
 
     bool anchors_changed = false;
     for(auto [_, ptr] : anchors_) {
@@ -135,7 +132,7 @@ void Scenario::draw() {
 
     // draw underlay
     cv::Mat img;
-    if(anchors_changed || prev_base_img.size[0] == 1) { // need to redraw entire image
+    if(anchors_changed || first_draw) { // need to redraw entire image
         img = cv::Mat(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
         // draw grid lines for scale
         for(size_t i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
@@ -164,20 +161,21 @@ void Scenario::draw() {
         // TODO: make this less messy
         double mouse_x_world = vis_cx_ - vis_scale_*vis_width_/2  + vis_scale_/2 + mouse_coords[0]*vis_scale_;
         double mouse_y_world = vis_cy_ + vis_scale_*vis_height_/2 - vis_scale_/2 - mouse_coords[1]*vis_scale_;
-        std::pair<double, double> f_mouse = total_force(tuw::Point2D(mouse_x_world, mouse_y_world));
-        int arrow_x = mouse_coords[0] + f_mouse.first/vis_scale_;
-        int arrow_y = mouse_coords[1] - f_mouse.second/vis_scale_;
+        Force f_mouse = total_force(tuw::Point2D(mouse_x_world, mouse_y_world));
+        int arrow_x = mouse_coords[0] + f_mouse.x()/vis_scale_;
+        int arrow_y = mouse_coords[1] - f_mouse.y()/vis_scale_;
         cv::Point2l p1(mouse_coords[0], mouse_coords[1]);
         cv::Point2l p2(arrow_x, arrow_y);
         cv::arrowedLine(img, p1, p2, cv::Vec3b(0,0,255), 2, 8, 0, 0.05);
-        std::cout << "force: " << f_mouse.first << ", " << f_mouse.second << std::endl;
+        std::cout << "force: " << f_mouse.abs() << " (" << f_mouse.x() << ", " << f_mouse.y() << ")" << std::endl;
     }
 
-    cv::namedWindow(vis_win_name_);
-    cv::setMouseCallback(vis_win_name_, mouse_callback, (void*)mouse_coords);
+    if(first_draw) {
+        cv::namedWindow(vis_win_name_, cv::WINDOW_NORMAL);
+        cv::resizeWindow(vis_win_name_, 640, 480);
+        cv::setMouseCallback(vis_win_name_, mouse_callback, (void*)mouse_coords);
+    }
     cv::imshow(vis_win_name_, img);
     cv::waitKey(1);
+    first_draw = false;
 }
-
-
-

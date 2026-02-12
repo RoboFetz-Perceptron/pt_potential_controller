@@ -54,10 +54,10 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
 
 void PotentialControllerNode::control_loop() {
-    std::pair<double, double> xy = scenario_->compute_feedback(control_anchor_);
+    Force f = scenario_->compute_feedback(control_anchor_);
     TwistMsg msg;
-    msg.linear.x = xy.first;
-    msg.linear.y = xy.second;
+    msg.linear.x = f.x();
+    msg.linear.y = f.y();
 
     // TODO: rotation command/PID
 
@@ -112,13 +112,13 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         AnchorPtr loaded;
         if(anchor_type == "point") {
             loaded = std::make_shared<PointAnchor>(PointAnchor());
-            if(anchor_children["pos_x"] && anchor_children["pos_x"]) {
-                tuw::Point2D initial(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
-                loaded->update_point(initial);
-            }
-            else {
-                throw std::runtime_error("Parameters missing!"); // TODO: initialize anchor as disabled instead
-            }
+            tuw::Point2D initial(0.0, 0.0);
+            if(anchor_children["pos_x"] && anchor_children["pos_x"])
+                initial = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));   
+            else
+                loaded->enabled_ = false;
+            loaded->update_point(initial);
+
             if(anchor_children["pos_topic"]) {
                 auto sub = this->create_subscription<PointMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
                     [this, loaded, scenario](const PointMsg::SharedPtr msg) {
@@ -131,13 +131,12 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
             }
         } else if(anchor_type == "pose") {
             loaded = std::make_shared<PoseAnchor>(PoseAnchor());
-            if(anchor_children["pos_x"] && anchor_children["pos_x"] && anchor_children["pos_t"]) {
-                tuw::Pose2D initial(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>(), anchor_children["pos_t"].as<double>());
-                loaded->update_pose(initial);  
-            }
-            else {
-                throw std::runtime_error("Parameters missing!"); // TODO: initialize anchor as disabled instead
-            }
+            tuw::Pose2D initial(0.0, 0.0, 0.0);
+            if(anchor_children["pos_x"] && anchor_children["pos_x"] && anchor_children["pos_t"])
+                initial = tuw::Pose2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>(), anchor_children["pos_t"].as<double>());
+            else
+                loaded->enabled_ = false;
+            loaded->update_pose(initial);  
             if(anchor_children["pos_topic"]) {
                 auto sub = this->create_subscription<PoseMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
                     [this, loaded, scenario](const PoseMsg::SharedPtr msg) {
@@ -157,6 +156,8 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         }
 
         // add optional traits
+        if(anchor_children["enabled"])
+            loaded->enabled_ = anchor_children["enabled"].as<bool>();
         if(anchor_children["potentials"])
             load_potentials(anchor_children["potentials"], loaded);
         

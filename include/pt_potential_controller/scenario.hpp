@@ -25,10 +25,10 @@ namespace pt_potential_controller {
             void add_potential(std::string anchor_id, PotentialPtr Potential);
 
             // compute total force at target point
-            std::pair<double, double> total_force(tuw::Point2D target_point);
+            Force total_force(tuw::Point2D target_point);
 
             // compute sum of forces acting on anchor
-            std::pair<double, double> compute_feedback(std::string anchor_id);
+            Force compute_feedback(std::string anchor_id);
 
             void set_vis_params(std::string win_name,
                                 double scale, int width, int height,
