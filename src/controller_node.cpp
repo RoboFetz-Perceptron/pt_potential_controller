@@ -156,7 +156,25 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
                 subs_.push_back(sub);
             }
         } else if(anchor_type == "line") {
-            throw std::runtime_error("Line anchors not implemented");
+            loaded = std::make_shared<LineAnchor>(LineAnchor());
+            tuw::LineSegment2D initial(0.0, 0.0, 0.0, 0.0);
+            if(anchor_children["pos_x0"] && anchor_children["pos_y0"] && anchor_children["pos_x1"] && anchor_children["pos_y1"])
+                initial = tuw::LineSegment2D(anchor_children["pos_x0"].as<double>(), anchor_children["pos_y0"].as<double>(),
+                                             anchor_children["pos_x1"].as<double>(), anchor_children["pos_y1"].as<double>());
+            else
+                loaded->enabled_ = false;
+            loaded->update_line(initial);
+
+            if(anchor_children["pos_topic"]) {
+                auto sub = this->create_subscription<LineMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
+                    [this, loaded, scenario](const LineMsg::SharedPtr msg) {
+                        loaded->update_line(tuw::LineSegment2D(msg->p0.x, msg->p0.y, msg->p1.x, msg->p1.y));
+                        loaded->enabled_ = true;
+                        loaded->updated_ = true;
+                    }
+                );
+                subs_.push_back(sub);
+            }
         } else if(anchor_type == "image") {
             throw std::runtime_error("Image anchors not implemented");
         } else {

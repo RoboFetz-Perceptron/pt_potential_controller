@@ -10,6 +10,7 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include "yaml-cpp/yaml.h"
 
+#include <pt_msgs/msg/line.hpp>
 #include <pt_msgs/srv/load_scenario.hpp>
 
 #include <anchor.hpp>
@@ -21,6 +22,7 @@ namespace pt_potential_controller {
     using TwistMsg = geometry_msgs::msg::Twist;
     using PointMsg = geometry_msgs::msg::Point;
     using PoseMsg = geometry_msgs::msg::Pose;
+    using LineMsg = pt_msgs::msg::Line;
     using LoadScenarioSrv = pt_msgs::srv::LoadScenario;
 
     class PotentialControllerNode : public rclcpp::Node {

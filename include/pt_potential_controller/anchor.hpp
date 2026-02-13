@@ -32,9 +32,10 @@ namespace pt_potential_controller {
             //virtual void update_position(Ts ... args);
 
             // workaround: user has to check type and call correct update function :/
+            // other possibility: define a bunch of functions with fixed number of double arguments
             virtual void update_point(tuw::Point2D p) {(void) p;};
             virtual void update_pose(tuw::Pose2D p) {(void) p;};
-            virtual void update_line(tuw::Line2D l) {(void) l;};
+            virtual void update_line(tuw::LineSegment2D l) {(void) l;};
             virtual void update_image(cv::Mat img) {(void) img;};
 
             // add a new potential to this anchor
@@ -66,7 +67,6 @@ namespace pt_potential_controller {
             tuw::Point2D p_ = tuw::Point2D();
 
             void update_point(tuw::Point2D p) override;
-            //tuw::Point2D center_point() override;
             tuw::Point2D acting_point(tuw::Point2D p) override;
             Force force_affected(std::vector<AnchorPtr> &anchors) override;
             void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
@@ -84,25 +84,36 @@ namespace pt_potential_controller {
             tuw::Pose2D p_ = tuw::Pose2D();
 
             void update_pose(tuw::Pose2D p) override;
-            //tuw::Point2D center_point() override;
+            tuw::Point2D acting_point(tuw::Point2D p) override;
+            Force force_affected(std::vector<AnchorPtr> &anchors) override;
+            void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
+    };
+
+    class LineAnchor : public Anchor {
+        public:
+        LineAnchor();
+        LineAnchor(tuw::LineSegment2D l);
+        LineAnchor(tuw::Point2D p0, tuw::Point2D p1);
+        //LineAnchor(tuw::Line2D l, std::vector<PotentialPtr> potentials);
+        //LineAnchor(double x, double y, double t, std::vector<PotentialPtr> potentials);
+        ~LineAnchor();
+
+            tuw::LineSegment2D l_ = tuw::LineSegment2D();
+
+            void update_line(tuw::LineSegment2D l) override;
             tuw::Point2D acting_point(tuw::Point2D p) override;
             Force force_affected(std::vector<AnchorPtr> &anchors) override;
             void draw_anchor(cv::Mat &img, double scale, double cx, double cy) override;
     };
 
     // not implemented:
-    class LineAnchor : public Anchor {
-        public:
-            tuw::Line2D l_ = tuw::Line2D();
-
-            void update_line(tuw::Line2D l) override;
-    };
-
     class ImageAnchor : public Anchor {
         public:
             cv::Mat img_ = cv::Mat();
 
             void update_image(cv::Mat img) override;
+
+            Force force_affected(std::vector<AnchorPtr> &anchors) override;
     };
 
 }

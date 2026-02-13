@@ -46,6 +46,7 @@ class Simple_Sim(Node):
             self.enemy_x = 0.0
             self.enemy_y = 0.0
         self.enemy_t = 0.0 # keep enemy pose, but only publish point
+        self.enemy_moved = False
 
         self.own_twist = Twist()
         self.own_twist_sub = self.create_subscription(Twist, 'own_twist', self.callback_own_twist, 10)
@@ -64,6 +65,7 @@ class Simple_Sim(Node):
 
     def callback_enemy_twist(self, msg: Twist):
         self.enemy_twist = msg
+        self.enemy_moved = True
 
 
     def quat_from_euler(self, roll, pitch, yaw):
@@ -90,15 +92,16 @@ class Simple_Sim(Node):
         msg.orientation = self.quat_from_euler(0.0, 0.0, self.own_t)
         self.own_pose_pub.publish(msg)
 
-        dx = self.enemy_twist.linear.x*np.cos(self.enemy_t) + self.enemy_twist.linear.y*np.cos(self.enemy_t + np.pi/2)
-        dy = self.enemy_twist.linear.x*np.sin(self.enemy_t) + self.enemy_twist.linear.y*np.sin(self.enemy_t + np.pi/2)
-        self.enemy_x += dx*self.freq
-        self.enemy_y += dy*self.freq
-        self.enemy_t += (self.enemy_twist.angular.z)*self.freq
-        msg = Point()
-        msg.x = self.enemy_x
-        msg.y = self.enemy_y
-        self.enemy_pose_pub.publish(msg)
+        if self.enemy_moved: # avoid changing position of anchor with attached potential for performance reasons
+            dx = self.enemy_twist.linear.x*np.cos(self.enemy_t) + self.enemy_twist.linear.y*np.cos(self.enemy_t + np.pi/2)
+            dy = self.enemy_twist.linear.x*np.sin(self.enemy_t) + self.enemy_twist.linear.y*np.sin(self.enemy_t + np.pi/2)
+            self.enemy_x += dx*self.freq
+            self.enemy_y += dy*self.freq
+            self.enemy_t += (self.enemy_twist.angular.z)*self.freq
+            msg = Point()
+            msg.x = self.enemy_x
+            msg.y = self.enemy_y
+            self.enemy_pose_pub.publish(msg)
 
             
     

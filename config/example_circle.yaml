@@ -8,7 +8,7 @@ anchors:
 
   point:
     id: "enemy"
-    pos_x: 1.0
+    pos_x: 2.0
     pos_y: 0.0
     pos_topic: "/enemy_pose"
     potentials:
@@ -23,6 +23,51 @@ anchors:
         f_max: 0.5
         f_sign_override: 1 # -1 ... always attract, 1 ... always repell
         d_offset: 1.0
+
+  line:
+    id: "wall_left"
+    pos_x0: -3.0
+    pos_y0: -2.0
+    pos_x1: -3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_right"
+    pos_x0: 3.0
+    pos_y0: -2.0
+    pos_x1: 3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_bottom"
+    pos_x0: -3.0
+    pos_y0: -2.0
+    pos_x1: 3.0
+    pos_y1: -2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_top"
+    pos_x0: -3.0
+    pos_y0: 2.0
+    pos_x1: 3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
 
 visualization:
   scale: 0.01 # world coordinate units per pixel

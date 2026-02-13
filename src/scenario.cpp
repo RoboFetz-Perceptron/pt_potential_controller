@@ -70,17 +70,11 @@ Force Scenario::total_force(tuw::Point2D target_point) {
 
 
 Force Scenario::compute_feedback(std::string anchor_id) {
-    AnchorPtr target = anchors_[anchor_id];
-    if(target->type_ != "point" && target->type_ != "pose") {
-        throw std::invalid_argument("anchor feedback is only supported for PointAnchors and PoseAnchors!");
-    }
-    
     std::vector<AnchorPtr> others;
     for(auto [id, ptr] : anchors_) {
         if(id != anchor_id)
             others.push_back(ptr);
     }
-
     return anchors_[anchor_id]->force_affected(others);
 }
 
@@ -120,15 +114,17 @@ void Scenario::draw() {
     static int mouse_coords[2] = {-1, -1};
     static cv::Mat prev_base_img;
 
-    bool anchors_changed = false;
+    bool forces_changed = false;
     for(auto [_, ptr] : anchors_) {
-        anchors_changed = ptr->updated_ ? true : anchors_changed;
+        if(ptr->updated_ && ptr->potentials_.size() > 0)
+            forces_changed = true;
         ptr->updated_ = false;
     }
 
     // draw underlay
     cv::Mat img;
-    if(anchors_changed || first_draw) { // need to redraw entire image
+    if(forces_changed || first_draw) { // need to redraw entire image
+        std::cout << "redraw forces" << std::endl;
         img = cv::Mat(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
         // draw grid lines for scale
         for(size_t i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
@@ -143,13 +139,14 @@ void Scenario::draw() {
         // visualize intensity of forces
         draw_forces(img);
 
-        // draw anchors
-        for(auto [_, ptr] : anchors_) {
-            ptr->draw_anchor(img, vis_scale_, vis_cx_, vis_cy_);
-        }
         prev_base_img = img.clone();
     } else { // re-use force/anchor visualization from last frame
         img = prev_base_img.clone();
+    }
+
+    // draw anchors
+    for(auto [_, ptr] : anchors_) {
+        ptr->draw_anchor(img, vis_scale_, vis_cx_, vis_cy_);
     }
 
     // interactively show force vector at mouse position

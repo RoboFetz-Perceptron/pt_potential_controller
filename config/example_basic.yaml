@@ -17,7 +17,7 @@ anchors:
 
   point:
     id: "obstacle"
-    enabled: true
+    enabled: false
     pos_x: 0.0
     pos_y: 1.0
     potentials:
@@ -25,6 +25,51 @@ anchors:
         base: 2.718281828
         exp: 0.1
         f_max: 10.0 # maximum repulsion higher than opponents attraction!
+
+  line:
+    id: "wall_left"
+    pos_x0: -3.0
+    pos_y0: -2.0
+    pos_x1: -3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_right"
+    pos_x0: 3.0
+    pos_y0: -2.0
+    pos_x1: 3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_bottom"
+    pos_x0: -3.0
+    pos_y0: -2.0
+    pos_x1: 3.0
+    pos_y1: -2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_top"
+    pos_x0: -3.0
+    pos_y0: 2.0
+    pos_x1: 3.0
+    pos_y1: 2.0
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
 
 visualization:
   scale: 0.01 # world coordinate units per pixel

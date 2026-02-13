@@ -67,8 +67,6 @@ void PointAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) 
     if(!enabled_) return;
     int img_x = (cx + p_.x())/scale + img.cols/2;
     int img_y = (cy - p_.y())/scale + img.rows/2;
-    if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)
-        return; // point is out of bounds
     cv::Point2l p_cv(img_x, img_y);
     cv::circle(img, p_cv, 6, cv::Vec3b(255,0,0), -1, 0, 0);
     cv::circle(img, p_cv, 6, cv::Vec3b(0,0,0), 1, 0, 0); // outline
@@ -82,7 +80,7 @@ PoseAnchor::PoseAnchor() : Anchor("pose") {
     potentials_ = {};
 }
 
-PoseAnchor::PoseAnchor(tuw::Pose2D p) : Anchor("point") {
+PoseAnchor::PoseAnchor(tuw::Pose2D p) : Anchor("pose") {
     p_ = p;
     potentials_ = {};
 }
@@ -121,8 +119,6 @@ void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
     if(!enabled_) return;
     int img_x = (cx + p_.position().x())/scale + img.cols/2;
     int img_y = (cy - p_.position().y())/scale + img.rows/2;
-    if(img_x < 0 || img_x > img.cols || img_y < 0 || img_y > img.rows)
-        return; // point is out of bounds
     cv::Point2l p_cv(img_x, img_y);
     cv::circle(img, p_cv, 6, cv::Vec3b(0,255,0), -1, 0, 0);
     cv::circle(img, p_cv, 6, cv::Vec3b(0,0,0), 1, 0, 0); // outline
@@ -132,4 +128,56 @@ void PoseAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
     int line_end_y = img_y - 6*std::sin(p_.theta());
     cv::Point2l p2(line_end_x, line_end_y);
     cv::line(img, p1, p2, cv::Vec3b(0,0,0));
+}
+
+
+//// LineAnchor ////
+
+LineAnchor::LineAnchor() : Anchor("line") {
+    l_ = tuw::LineSegment2D(0.0, 0.0, 0.0, 0.0);
+    potentials_ = {};
+}
+
+LineAnchor::LineAnchor(tuw::LineSegment2D l) : Anchor("line") {
+    l_ = l;
+    potentials_ = {};
+}
+
+LineAnchor::LineAnchor(tuw::Point2D p0, tuw::Point2D p1) : Anchor("line") {
+    l_ = tuw::LineSegment2D(p0, p1);
+    potentials_ = {};
+}
+
+LineAnchor::~LineAnchor() = default;
+
+void LineAnchor::update_line(tuw::LineSegment2D l) {
+    l_ = l;
+}
+
+tuw::Point2D LineAnchor::acting_point(tuw::Point2D p) {
+    return l_.closestPointTo(p);
+}
+
+Force LineAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
+    (void) anchors;
+    throw std::invalid_argument("Force acting on LineAnchor is not implemented!");
+}
+
+void LineAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
+    if(!enabled_) return;
+    int img_x0 = (cx + l_.x0())/scale + img.cols/2;
+    int img_y0 = (cy - l_.y0())/scale + img.rows/2;
+    int img_x1 = (cx + l_.x1())/scale + img.cols/2;
+    int img_y1 = (cy - l_.y1())/scale + img.rows/2;
+    cv::Point2l p0_cv(img_x0, img_y0);
+    cv::Point2l p1_cv(img_x1, img_y1);
+    cv::line(img, p0_cv, p1_cv, cv::Vec3b(0,0,0), 2);
+}
+
+
+//// ImageAnchor ////
+
+Force ImageAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
+    (void) anchors;
+    throw std::invalid_argument("Force acting on ImageAnchor is not implemented!");
 }
