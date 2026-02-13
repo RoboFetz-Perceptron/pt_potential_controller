@@ -1,9 +1,9 @@
 anchors:
   pose:
     id: "perceptron"
-    pos_x: 0.0
+    pos_x: -1.0
     pos_y: 0.0
-    pos_t: 1.57
+    pos_t: 0.0
     pos_topic: "/own_pose"
 
   point:
@@ -14,13 +14,13 @@ anchors:
     potentials:
       linear:
         lin: -1.0
-        f_max: 2.0
+        f_max: 1.0
         d_offset: 1.0
         d_invert: false
       linear:
         lin: 1.0
         angle_twist: 1.57
-        f_max: 10.0
+        f_max: 0.5
         f_sign_override: 1 # -1 ... always attract, 1 ... always repell
         d_offset: 1.0
 
@@ -30,4 +30,4 @@ visualization:
   height: 480
   center_x: 0.0 # center of window in world coordinates
   center_y: 0.0
-  f_max: 10.0 # max. force to scale colors for
+  f_max: 1.0 # max. force to scale colors for

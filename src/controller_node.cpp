@@ -62,12 +62,11 @@ void PotentialControllerNode::control_loop() {
 
     tuw::Pose2D ideal_pos;
     ideal_pos.set(control_pose_.position(), rotation_target_point_);
-    double angle_error = ideal_pos.get_theta() - control_pose_.get_theta();
+    double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
     msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
     w_pid_i_state_ += angle_error;
     w_pid_d_state_ = angle_error;
 
-    RCLCPP_INFO(this->get_logger(), "TWIST x: %lf y: %lf w: %lf", msg.linear.x, msg.linear.y, msg.angular.z);
     twist_publisher_->publish(msg);
 
     if(vis_enabled_)
