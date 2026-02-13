@@ -14,12 +14,13 @@ anchors:
     potentials:
       linear:
         lin: -1.0
-        f_max: 1.0
+        f_max: 2.0
         d_offset: 1.0
         d_invert: false
       linear:
         lin: 1.0
         angle_twist: 1.57
+        f_max: 10.0
         f_sign_override: 1 # -1 ... always attract, 1 ... always repell
         d_offset: 1.0
 

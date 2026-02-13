@@ -8,7 +8,7 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         auto descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
-        scenario_path_ = this->declare_parameter<std::string>("scenario_path", "/home/arc/projects/robofetz/ws02/src/pt_potential_controller/config/example_basic.yaml", descriptor);
+        scenario_path_ = this->declare_parameter<std::string>("scenario_path", "", descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
@@ -49,7 +49,8 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         }
     );
 
-    load_scenario(scenario_path_);
+    if(scenario_path_ != "")
+        load_scenario(scenario_path_);
 }
 
 
@@ -59,9 +60,14 @@ void PotentialControllerNode::control_loop() {
     msg.linear.x = f.x();
     msg.linear.y = f.y();
 
-    // TODO: rotation command/PID
+    tuw::Pose2D ideal_pos;
+    ideal_pos.set(control_pose_.position(), rotation_target_point_);
+    double angle_error = ideal_pos.get_theta() - control_pose_.get_theta();
+    msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
+    w_pid_i_state_ += angle_error;
+    w_pid_d_state_ = angle_error;
 
-    RCLCPP_INFO(this->get_logger(), "LOOP, x: %lf y: %lf w: %lf", msg.linear.x, msg.linear.y, msg.angular.z);
+    RCLCPP_INFO(this->get_logger(), "TWIST x: %lf y: %lf w: %lf", msg.linear.x, msg.linear.y, msg.angular.z);
     twist_publisher_->publish(msg);
 
     if(vis_enabled_)
@@ -73,6 +79,8 @@ void PotentialControllerNode::control_loop() {
 bool PotentialControllerNode::load_scenario(std::string path) {
     try {
         subs_ = {}; // refererence counter of shared pointer should de-allocate subscribers -> old callbacks removed
+        sub_control_pose_.reset();
+        sub_rotation_target_point_.reset();
 
         YAML::Node file_root;
         file_root = YAML::LoadFile(path);
@@ -80,8 +88,6 @@ bool PotentialControllerNode::load_scenario(std::string path) {
         if(!file_root.IsMap())
             throw std::runtime_error("Root node is not a mapping containing either \"anchors\" or \"visualization\"");
         Scenario loaded_scenario = Scenario();
-        BindingVec loaded_in_bindings;
-        BindingVec loaded_out_bindings;
         for(std::pair<YAML::Node, YAML::Node> file_child : file_root) {
             if(file_child.first.as<std::string>() == "anchors")
                 load_anchors(file_child.second, loaded_scenario);
@@ -92,8 +98,6 @@ bool PotentialControllerNode::load_scenario(std::string path) {
         }
         RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
         scenario_ = std::make_shared<Scenario>(loaded_scenario);
-        in_bindings_ = std::make_shared<BindingVec>(loaded_in_bindings);
-        out_bindings_ = std::make_shared<BindingVec>(loaded_out_bindings);
         return true;
     } catch(std::exception &ex) {
         RCLCPP_ERROR(this->get_logger(), "Exception while parsing YAML: %s", ex.what());
@@ -114,8 +118,8 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         if(anchor_type == "point") {
             loaded = std::make_shared<PointAnchor>(PointAnchor());
             tuw::Point2D initial(0.0, 0.0);
-            if(anchor_children["pos_x"] && anchor_children["pos_x"])
-                initial = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));   
+            if(anchor_children["pos_x"] && anchor_children["pos_y"])
+                initial = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
             else
                 loaded->enabled_ = false;
             loaded->update_point(initial);
@@ -133,11 +137,12 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         } else if(anchor_type == "pose") {
             loaded = std::make_shared<PoseAnchor>(PoseAnchor());
             tuw::Pose2D initial(0.0, 0.0, 0.0);
-            if(anchor_children["pos_x"] && anchor_children["pos_x"] && anchor_children["pos_t"])
+            if(anchor_children["pos_x"] && anchor_children["pos_y"] && anchor_children["pos_t"])
                 initial = tuw::Pose2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>(), anchor_children["pos_t"].as<double>());
             else
                 loaded->enabled_ = false;
-            loaded->update_pose(initial);  
+            loaded->update_pose(initial);
+
             if(anchor_children["pos_topic"]) {
                 auto sub = this->create_subscription<PoseMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
                     [this, loaded, scenario](const PoseMsg::SharedPtr msg) {
@@ -162,16 +167,38 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
         if(anchor_children["potentials"])
             load_potentials(anchor_children["potentials"], loaded);
         
+        // assign ids
         std::string anchor_id;
         if(anchor_children["id"])
             anchor_id = anchor_children["id"].as<std::string>();
         else
             anchor_id = std::string("auto_id_") + std::to_string((unsigned long long)loaded.get());
+        
+        // register callbacks needed for rotation PID
+        if(anchor_id == rotation_target_) {
+            if(anchor_children["pos_topic"])
+                sub_rotation_target_point_ = this->create_subscription<PointMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
+                    [this](const PointMsg::SharedPtr msg) {
+                        rotation_target_point_ = tuw::Point2D(msg->x, msg->y);
+                    }
+                );
+            if(anchor_children["pos_x"] && anchor_children["pos_y"])
+                rotation_target_point_ = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
+        }
+        if(anchor_id == control_anchor_) {
+            if(anchor_children["pos_topic"])
+                sub_control_pose_ = this->create_subscription<PoseMsg>(anchor_children["pos_topic"].as<std::string>(), 10,
+                    [this](const PoseMsg::SharedPtr msg) {
+                        control_pose_ = tuw::Pose2D(msg->position.x, msg->position.y, tuw::QuaternionToYaw(msg->orientation));
+                    }
+                );
+            if(anchor_children["pos_x"] && anchor_children["pos_y"] && anchor_children["pos_t"])
+                control_pose_ = tuw::Pose2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>(), anchor_children["pos_t"].as<double>());
+        }
 
         scenario.add_anchor(anchor_id, loaded);
         RCLCPP_INFO(this->get_logger(), "loaded %s-anchor \"%s\"", anchor_type.c_str(), anchor_id.c_str());
     }
-    
 }
 
 void PotentialControllerNode::load_potentials(YAML::Node potentials_map, AnchorPtr &anchor) {

@@ -20,7 +20,6 @@ namespace pt_potential_controller {
             Scenario(std::vector<AnchorPtr> anchors);
             Scenario(std::map<std::string, AnchorPtr> anchors);
 
-            //void add_anchor(std::string anchor_id, Anchor anchor);
             void add_anchor(std::string anchor_id, AnchorPtr anchor);
             void add_potential(std::string anchor_id, PotentialPtr Potential);
 
@@ -30,6 +29,7 @@ namespace pt_potential_controller {
             // compute sum of forces acting on anchor
             Force compute_feedback(std::string anchor_id);
 
+            // drawing functions
             void set_vis_params(std::string win_name,
                                 double scale, int width, int height,
                                 double cx, double cy, double f_max);

@@ -10,6 +10,16 @@ void Anchor::add_potential(PotentialPtr potential) {
     potentials_.push_back(potential);
 }
 
+Force Anchor::force_exerted(tuw::Point2D target) {
+    if(!enabled_) return Force(0.0, 0.0);
+    tuw::Point2D diff = target - acting_point(target);
+    Force f_total = Force(0.0, 0.0);
+    for(auto pot : potentials_) {
+        Force f = pot->resultant(diff);
+        f_total = f_total + f;
+    }
+    return f_total;
+}
 
 //// PointAnchor ////
 
@@ -39,15 +49,9 @@ void PointAnchor::update_point(tuw::Point2D p) {
     p_ = p;
 }
 
-Force PointAnchor::force_exerted(tuw::Point2D target) {
-    if(!enabled_) return Force(0.0, 0.0);
-    tuw::Point2D diff = target - p_;
-    Force f_total = Force(0.0, 0.0);
-    for(auto pot : potentials_) {
-        Force f = pot->resultant(diff);
-        f_total = f_total + f;
-    }
-    return f_total;
+tuw::Point2D PointAnchor::acting_point(tuw::Point2D p) {
+    (void) p;
+    return p_;
 }
 
 Force PointAnchor::force_affected(std::vector<AnchorPtr> &anchors) {
@@ -99,15 +103,9 @@ void PoseAnchor::update_pose(tuw::Pose2D p) {
     p_ = p;
 }
 
-Force PoseAnchor::force_exerted(tuw::Point2D target) {
-    if(!enabled_) return Force(0.0, 0.0);
-    tuw::Point2D diff = target - p_.position();
-    Force f_total = Force(0.0, 0.0);
-    for(auto pot : potentials_) {
-        Force f = pot->resultant(diff);
-        f_total = f_total + f;
-    }
-    return f_total;
+tuw::Point2D PoseAnchor::acting_point(tuw::Point2D p) {
+    (void) p;
+    return p_.position();
 }
 
 Force PoseAnchor::force_affected(std::vector<AnchorPtr> &anchors) {

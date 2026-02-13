@@ -18,10 +18,6 @@
 
 namespace pt_potential_controller {
 
-    using Binding = std::tuple<AnchorPtr, std::string, std::string>; // anchor, type, topic
-    using BindingVec = std::vector<Binding>;
-    using BindingVecPtr = std::shared_ptr<BindingVec>;
-
     using TwistMsg = geometry_msgs::msg::Twist;
     using PointMsg = geometry_msgs::msg::Point;
     using PoseMsg = geometry_msgs::msg::Pose;
@@ -31,45 +27,37 @@ namespace pt_potential_controller {
         public:
             PotentialControllerNode(rclcpp::NodeOptions options);
 
-            ScenarioPtr scenario_;
-            BindingVecPtr in_bindings_;
-            BindingVecPtr out_bindings_;
-
-            //std::map<AnchorPtr, rclcpp::SubscriberBase::SharedPtr>
-            //std::map<AnchorPtr, rclcpp::PublisherBase::SharedPtr> publishers_;
-
-            
-
             // ROS parameters
             std::string scenario_path_;
             std::string control_anchor_;
             std::string rotation_target_;
             double freq_ = 10.0;
-            //double max_vel_x_ = 1.0
-            //double max_vel_y_ = 1.0
-            //double max_vel_w_ = 3.14
             double w_pid_p_ = 1.0;
             double w_pid_i_ = 0.1;
             double w_pid_d_ = 0.1;
             bool vis_enabled_ = true;
 
-
             // ROS interfaces
             std::vector<rclcpp::SubscriptionBase::SharedPtr> subs_;
+            rclcpp::Subscription<PoseMsg>::SharedPtr sub_control_pose_;
+            rclcpp::Subscription<PointMsg>::SharedPtr sub_rotation_target_point_;
             rclcpp::Publisher<TwistMsg>::SharedPtr twist_publisher_;
             rclcpp::TimerBase::SharedPtr twist_timer_;
             rclcpp::Service<LoadScenarioSrv>::SharedPtr load_scenario_server_;
 
-            std::unique_ptr<std::thread> vis_thread_;
+            // other fields
+            ScenarioPtr scenario_;
+            tuw::Pose2D control_pose_;
+            tuw::Point2D rotation_target_point_;
+            double w_pid_i_state_ = 0.0;
+            double w_pid_d_state_ = 0.0;
 
-        
         private:
             bool anchors_updated_ = true;
             void control_loop();
 
             bool load_scenario(std::string path);
-            void load_anchors(YAML::Node anchors_map, Scenario &scenario);//,
-                              //BindingVec &in_bindings, BindingVec &out_bindings);
+            void load_anchors(YAML::Node anchors_map, Scenario &scenario);
             void load_potentials(YAML::Node potentials_map, AnchorPtr &anchor);
             void load_vis(YAML::Node vis_map, Scenario &scenario);
     };

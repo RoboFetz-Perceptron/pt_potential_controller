@@ -50,10 +50,6 @@ void Scenario::set_vis_f_max(double f_max) {
     vis_f_max_ = f_max;
 }
 
-/*void Scenario::add_anchor(std::string anchor_id, Anchor anchor) {
-    anchors_[anchor_id] = std::make_shared<Anchor>(anchor);
-}*/
-
 void Scenario::add_anchor(std::string anchor_id, AnchorPtr anchor) {
     anchors_[anchor_id] = anchor;
 }
