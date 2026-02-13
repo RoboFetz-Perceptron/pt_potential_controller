@@ -36,6 +36,7 @@ namespace pt_potential_controller {
             double w_pid_i_ = 0.1;
             double w_pid_d_ = 0.1;
             bool vis_enabled_ = true;
+            bool scenario_loaded_ = false;
 
             // ROS interfaces
             std::vector<rclcpp::SubscriptionBase::SharedPtr> subs_;
@@ -56,8 +57,8 @@ namespace pt_potential_controller {
             bool anchors_updated_ = true;
             void control_loop();
 
-            bool load_scenario(std::string path);
-            void load_anchors(YAML::Node anchors_map, Scenario &scenario);
+            bool load_scenario(std::string path, bool init_poses);
+            void load_anchors(YAML::Node anchors_map, Scenario &scenario, bool init_poses);
             void load_potentials(YAML::Node potentials_map, AnchorPtr &anchor);
             void load_vis(YAML::Node vis_map, Scenario &scenario);
     };

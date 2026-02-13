@@ -45,12 +45,15 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
     load_scenario_server_ = create_service<LoadScenarioSrv>("potential_controller_node/load_scenario",
         [this](const std::shared_ptr<LoadScenarioSrv::Request> request, std::shared_ptr<LoadScenarioSrv::Response> response) {
-            response->success = load_scenario(request->scenario_path);
+            response->success = load_scenario(request->scenario_path, !scenario_loaded_);
+            scenario_loaded_ = true;
         }
     );
 
-    if(scenario_path_ != "")
-        load_scenario(scenario_path_);
+    if(scenario_path_ != "") {
+        load_scenario(scenario_path_, true);
+        scenario_loaded_ = true;
+    }
 }
 
 
@@ -75,7 +78,7 @@ void PotentialControllerNode::control_loop() {
 
 
 
-bool PotentialControllerNode::load_scenario(std::string path) {
+bool PotentialControllerNode::load_scenario(std::string path, bool init_poses) {
     try {
         subs_ = {}; // refererence counter of shared pointer should de-allocate subscribers -> old callbacks removed
         sub_control_pose_.reset();
@@ -89,7 +92,7 @@ bool PotentialControllerNode::load_scenario(std::string path) {
         Scenario loaded_scenario = Scenario();
         for(std::pair<YAML::Node, YAML::Node> file_child : file_root) {
             if(file_child.first.as<std::string>() == "anchors")
-                load_anchors(file_child.second, loaded_scenario);
+                load_anchors(file_child.second, loaded_scenario, init_poses);
             else if(file_child.first.as<std::string>() == "visualization")
                 load_vis(file_child.second, loaded_scenario);
             else
@@ -104,7 +107,7 @@ bool PotentialControllerNode::load_scenario(std::string path) {
     }
 }
 
-void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario) {
+void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario, bool init_poses) {
     if(!anchors_map.IsMap())
         throw std::runtime_error("Anchor node is not a mapping");
 
@@ -181,7 +184,7 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
                         rotation_target_point_ = tuw::Point2D(msg->x, msg->y);
                     }
                 );
-            if(anchor_children["pos_x"] && anchor_children["pos_y"])
+            if(anchor_children["pos_x"] && anchor_children["pos_y"] && init_poses)
                 rotation_target_point_ = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
         }
         if(anchor_id == control_anchor_) {
@@ -191,7 +194,7 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
                         control_pose_ = tuw::Pose2D(msg->position.x, msg->position.y, tuw::QuaternionToYaw(msg->orientation));
                     }
                 );
-            if(anchor_children["pos_x"] && anchor_children["pos_y"] && anchor_children["pos_t"])
+            if(anchor_children["pos_x"] && anchor_children["pos_y"] && anchor_children["pos_t"] && init_poses)
                 control_pose_ = tuw::Pose2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>(), anchor_children["pos_t"].as<double>());
         }
 
