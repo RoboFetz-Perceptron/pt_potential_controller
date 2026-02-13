@@ -40,7 +40,7 @@ namespace pt_potential_controller {
             double d_offset_ = 0.0;
             int f_sign_override_ = 0;
             double f_max_ = 1e9;
-            double rho_twist_ = 0.0;
+            double angle_twist_ = 0.0;
 
             Force resultant(tuw::Point2D diff);
             Force resultant(double dist, double angle);

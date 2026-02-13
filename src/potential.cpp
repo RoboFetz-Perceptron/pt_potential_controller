@@ -14,7 +14,7 @@ Force Potential::resultant(tuw::Point2D diff) {
 Force Potential::resultant(double dist, double angle) {
     double d_prime = preprocess_dist(dist);
     double abs = postprocess_force(force(d_prime));
-    angle += rho_twist_;
+    angle += angle_twist_;
     return Force(abs, angle);
 }
 

@@ -8,7 +8,7 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         auto descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
-        scenario_path_ = this->declare_parameter<std::string>("scenario_path", "/home/arc/projects/robofetz/ws02/src/pt_potential_controller/config/example_scenario.yaml", descriptor);
+        scenario_path_ = this->declare_parameter<std::string>("scenario_path", "/home/arc/projects/robofetz/ws02/src/pt_potential_controller/config/example_basic.yaml", descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
@@ -72,6 +72,8 @@ void PotentialControllerNode::control_loop() {
 
 bool PotentialControllerNode::load_scenario(std::string path) {
     try {
+        subs_ = {}; // refererence counter of shared pointer should de-allocate subscribers -> old callbacks removed
+
         YAML::Node file_root;
         file_root = YAML::LoadFile(path);
 
@@ -102,7 +104,6 @@ bool PotentialControllerNode::load_scenario(std::string path) {
 void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &scenario) {
     if(!anchors_map.IsMap())
         throw std::runtime_error("Anchor node is not a mapping");
-    //std::cout << anchors_map << std::endl;
 
     for(std::pair<YAML::Node, YAML::Node> anchor_node : anchors_map) {
         std::string anchor_type = anchor_node.first.as<std::string>();
@@ -207,8 +208,8 @@ void PotentialControllerNode::load_potentials(YAML::Node potentials_map, AnchorP
         if(potential_children["f_max"])
             loaded->f_max_ = potential_children["f_max"].as<double>();
 
-        if(potential_children["rho_twist"])
-            loaded->rho_twist_ = potential_children["rho_twist"].as<double>();
+        if(potential_children["angle_twist"])
+            loaded->angle_twist_ = potential_children["angle_twist"].as<double>();
 
         anchor->add_potential(loaded);
     }
