@@ -1,0 +1,64 @@
+anchors:
+  pose:
+    id: "perceptron"
+    pos_topic: "/pt_pose"
+
+  point:
+    id: "enemy"
+    pos_topic: "/enemy_pose"
+    potentials:
+      constant: # f = const
+        const: -1.5
+
+  line:
+    id: "wall_left"
+    pos_x0: -0.75
+    pos_y0:  0.75
+    pos_x1: -0.75
+    pos_y1: -0.75
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_right"
+    pos_x0:  0.75
+    pos_y0:  0.75
+    pos_x1:  0.75
+    pos_y1: -0.75
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_bottom"
+    pos_x0: -0.75
+    pos_y0: -0.75
+    pos_x1:  0.75
+    pos_y1: -0.75
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+  line:
+    id: "wall_top"
+    pos_x0: -0.75
+    pos_y0:  0.75
+    pos_x1:  0.75
+    pos_y1:  0.75
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.1
+
+
+visualization:
+  scale: 0.005 # world coordinate units per pixel
+  width: 400  # window size in pixels
+  height: 400
+  center_x: 0.0 # center of window in world coordinates
+  center_y: 0.0
+  f_max: 10.0 # max. force to scale colors for
