@@ -36,9 +36,22 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
+        w_pid_i_clamp_ = this->declare_parameter<double>("w_pid_i_clamp", 1.0, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
         vis_enabled_ = this->declare_parameter<bool>("vis_enabled", true, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        nav_enabled_ = this->declare_parameter<bool>("nav_enabled", true, descriptor);
     }
 
+    sub_nav_enabled_ = this->create_subscription<BoolMsg>("nav_enable", 10,
+        [this](const BoolMsg::SharedPtr msg) {
+            nav_enabled_ = msg->data;
+        }
+    );
 
     twist_publisher_ = this->create_publisher<TwistMsg>("cmd_vel", 10);
     twist_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0/freq_), std::bind(&PotentialControllerNode::control_loop, this));
@@ -50,11 +63,51 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         }
     );
 
+    param_change_callback_ = this->add_on_set_parameters_callback(std::bind(&PotentialControllerNode::reload_params, this, std::placeholders::_1));
+
     if(scenario_path_ != "") {
         load_scenario(scenario_path_, true);
         scenario_loaded_ = true;
     }
 }
+
+
+rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(const std::vector<rclcpp::Parameter> &parameters) {
+    rcl_interfaces::msg::SetParametersResult result;
+    result.successful = true;
+    result.reason = "success";
+    for (const auto &p: parameters) {
+        RCLCPP_INFO(this->get_logger(), "Received an update to parameter \"%s\" (%s)", p.get_name().c_str(), p.get_type_name().c_str());
+        if(p.get_name() == "scenario_path") {
+            scenario_path_ = p.as_string();
+            load_scenario(scenario_path_, true);
+            scenario_loaded_ = true;
+        }
+        if(p.get_name() == "controlled_anchor")
+            control_anchor_ = p.as_string();
+        if(p.get_name() == "rotation_target_anchor")
+            rotation_target_ = p.as_string();
+        else if(p.get_name() == "vis_enabled")
+            vis_enabled_ = p.as_bool();
+        else if(p.get_name() == "nav_enabled")
+            nav_enabled_ = p.as_bool();
+        else if(p.get_name() == "w_pid_p")
+            w_pid_p_ = p.as_double();
+        else if(p.get_name() == "w_pid_i")
+            w_pid_i_ = p.as_double();
+        else if(p.get_name() == "w_pid_d")
+            w_pid_d_ = p.as_double();
+        else if(p.get_name() == "w_pid_i_clamp")
+            w_pid_i_clamp_ = p.as_double();
+        else {
+            result.successful = false;
+            result.reason = "unimplemented";
+            RCLCPP_WARN(this->get_logger(), "Cant update parameter \"%s\": %s", p.get_name().c_str(), result.reason.c_str());
+        }
+    }
+    return result;
+}
+
 
 
 void PotentialControllerNode::control_loop() {
@@ -67,10 +120,12 @@ void PotentialControllerNode::control_loop() {
     ideal_pos.set(control_pose_.position(), rotation_target_point_);
     double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
     msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
-    w_pid_i_state_ += angle_error;
-    w_pid_d_state_ = angle_error;
 
-    twist_publisher_->publish(msg);
+    if(nav_enabled_) {
+        w_pid_i_state_ += std::clamp(angle_error, -w_pid_i_clamp_, w_pid_i_clamp_);
+        w_pid_d_state_ = angle_error;
+        twist_publisher_->publish(msg);
+    }
 
     if(vis_enabled_)
         scenario_->draw(); // warning: this blocks for at least 1ms --> make sure this does not mess with timer too much!
@@ -204,6 +259,8 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
                 );
             if(anchor_children["pos_x"] && anchor_children["pos_y"] && init_poses)
                 rotation_target_point_ = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
+            else
+                rotation_target_point_ = tuw::Point2D();
         }
         if(anchor_id == control_anchor_) {
             if(anchor_children["pos_topic"])
@@ -271,6 +328,8 @@ void PotentialControllerNode::load_vis(YAML::Node vis_map, Scenario &scenario) {
         scenario.set_vis_win_size(vis_map["width"].as<size_t>(), vis_map["height"].as<size_t>());
     if(vis_map["center_x"] && vis_map["center_y"])
         scenario.set_vis_center(vis_map["center_x"].as<double>(), vis_map["center_y"].as<double>());
-    if(vis_map["saturation"])
+    if(vis_map["show_forces"])
+        scenario.set_vis_show_forces(vis_map["show_forces"].as<bool>());
+    if(vis_map["f_max"])
         scenario.set_vis_f_max(vis_map["f_max"].as<double>());
 }

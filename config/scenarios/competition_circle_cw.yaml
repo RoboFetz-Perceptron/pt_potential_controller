@@ -7,20 +7,27 @@ anchors:
     id: "enemy"
     pos_topic: "/enemy_pose"
     potentials:
-      constant: # slowly approach at a distance
-        const: -0.25
-      linear: # speed up when close
-        lin: -0.5
+      linear:
+        lin: -0.25
+        f_max: 0.5
+        d_offset: 0.3
+        d_invert: false
+      linear:
+        lin: 0.25
+        angle_twist: 1.57
+        f_max: 0.5
+        f_sign_override: 1 # -1 ... always attract, 1 ... always repell
+        d_offset: 0.3
 
-  line:
-    id: "enemy_trajectory"
-    pos_topic: "/enemy_trajectory"
-    potentials:
-      exponential:
-        base: 2.718281828
-        exp: 0.2
-      constant: # counter min. force of 1 due to exponential function
-        const: -1.0
+  # line:
+  #   id: "enemy_trajectory"
+  #   pos_topic: "/enemy_trajectory"
+  #   potentials:
+  #     exponential:
+  #       base: 2.718281828
+  #       exp: 0.2
+  #     constant: # counter min. force of 1 due to exponential function
+  #       const: -1.0
 
   line:
     id: "wall_left"

@@ -169,6 +169,8 @@ void LineAnchor::draw_anchor(cv::Mat &img, double scale, double cx, double cy) {
     int img_y0 = (cy - l_.y0())/scale + img.rows/2;
     int img_x1 = (cx + l_.x1())/scale + img.cols/2;
     int img_y1 = (cy - l_.y1())/scale + img.rows/2;
+    if(img_x0 < 0 && img_y0 < 0 && img_x1 < 0 && img_y1 < 0) return;
+    if(img_x0 >= img.cols && img_y0 >= img.rows && img_x1 >= img.cols && img_y1 >= img.rows) return;
     cv::Point2l p0_cv(img_x0, img_y0);
     cv::Point2l p1_cv(img_x1, img_y1);
     cv::line(img, p0_cv, p1_cv, cv::Vec3b(0,0,0), 2);

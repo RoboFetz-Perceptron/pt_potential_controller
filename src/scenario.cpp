@@ -46,6 +46,10 @@ void Scenario::set_vis_center(double cx, double cy) {
     vis_cy_ = cy;
 }
 
+void Scenario::set_vis_show_forces(double show_forces) {
+    vis_show_forces_ = show_forces;
+}
+
 void Scenario::set_vis_f_max(double f_max) {
     vis_f_max_ = f_max;
 }
@@ -124,7 +128,6 @@ void Scenario::draw() {
     // draw underlay
     cv::Mat img;
     if(forces_changed || first_draw) { // need to redraw entire image
-        std::cout << "redraw forces" << std::endl;
         img = cv::Mat(vis_height_, vis_width_, CV_8UC3, cv::Vec3b(255, 255, 255));
         // draw grid lines for scale
         for(size_t i = vis_height_/2; i < vis_height_; i += 1/vis_scale_)
@@ -137,10 +140,11 @@ void Scenario::draw() {
             cv::line(img, cv::Point(i, 0), cv::Point(i, vis_height_), cv::Vec3b(128, 128, 128));
 
         // visualize intensity of forces
-        draw_forces(img);
+        if(vis_show_forces_)
+            draw_forces(img);
 
         prev_base_img = img.clone();
-    } else { // re-use force/anchor visualization from last frame
+    } else { // re-use force visualization from last frame
         img = prev_base_img.clone();
     }
 

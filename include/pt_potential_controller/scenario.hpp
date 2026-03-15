@@ -37,6 +37,7 @@ namespace pt_potential_controller {
             void set_vis_win_size(size_t width, size_t height);
             void set_vis_scale(double scale);
             void set_vis_center(double cx, double cy);
+            void set_vis_show_forces(double show_forces);
             void set_vis_f_max(double f_max);
             void draw();
 
@@ -48,6 +49,7 @@ namespace pt_potential_controller {
             size_t vis_height_ = 480;
             double vis_cx_ = 0.0;     // coordinate units
             double vis_cy_ = 0.0;
+            bool vis_show_forces_ = true;
             double vis_f_max_ = 5.0;
             void draw_forces(cv::Mat &img);
     };
