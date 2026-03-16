@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    scenario_path: "ws02/src/pt_potential_controller/config/scenarios/only_turn.yaml"
+    scenario_path: "ws02/src/pt_potential_controller/config/scenarios/competition_attack.yaml"
     controlled_anchor: "perceptron"
     rotation_target_anchor: "enemy"
     frequency: 20.0

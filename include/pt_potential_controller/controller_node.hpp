@@ -14,6 +14,7 @@
 
 #include <pt_msgs/msg/line.hpp>
 #include <pt_msgs/srv/load_scenario.hpp>
+#include <pt_msgs/srv/set_bool.hpp>
 
 #include <anchor.hpp>
 #include <scenario.hpp>
@@ -26,7 +27,9 @@ namespace pt_potential_controller {
     using PoseMsg = geometry_msgs::msg::Pose;
     using LineMsg = pt_msgs::msg::Line;
     using BoolMsg = std_msgs::msg::Bool;
+    //using StringMsg = std_msgs::msg::Bool;
     using LoadScenarioSrv = pt_msgs::srv::LoadScenario;
+    using SetBoolSrv = pt_msgs::srv::SetBool;
 
     class PotentialControllerNode : public rclcpp::Node {
         public:
@@ -42,16 +45,19 @@ namespace pt_potential_controller {
             double w_pid_d_ = 0.1;
             double w_pid_i_clamp_ = 1.0;
             bool vis_enabled_ = true;
-            bool nav_enabled_ = false;
+            bool ctrl_enabled_ = false;
 
             // ROS interfaces
             std::vector<rclcpp::SubscriptionBase::SharedPtr> subs_;
             rclcpp::Subscription<PoseMsg>::SharedPtr sub_control_pose_;
             rclcpp::Subscription<PointMsg>::SharedPtr sub_rotation_target_point_;
-            rclcpp::Subscription<BoolMsg>::SharedPtr sub_nav_enabled_;
+            //rclcpp::Subscription<BoolMsg>::SharedPtr sub_nav_enabled_;
             rclcpp::Publisher<TwistMsg>::SharedPtr twist_publisher_;
+            // rclcpp::Publisher<BoolMsg>::SharedPtr ctrl_enabled_publisher_;
+            // rclcpp::Publisher<BoolMsg>::SharedPtr scenario_path_publisher_;
             rclcpp::TimerBase::SharedPtr twist_timer_;
             rclcpp::Service<LoadScenarioSrv>::SharedPtr load_scenario_server_;
+            rclcpp::Service<SetBoolSrv>::SharedPtr ctrl_enable_server_;
             OnSetParametersCallbackHandle::SharedPtr param_change_callback_;
 
             // other fields

@@ -44,22 +44,26 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
-        nav_enabled_ = this->declare_parameter<bool>("nav_enabled", true, descriptor);
+        ctrl_enabled_ = this->declare_parameter<bool>("ctrl_enabled", true, descriptor);
     }
-
-    sub_nav_enabled_ = this->create_subscription<BoolMsg>("nav_enable", 10,
-        [this](const BoolMsg::SharedPtr msg) {
-            nav_enabled_ = msg->data;
-        }
-    );
 
     twist_publisher_ = this->create_publisher<TwistMsg>("cmd_vel", 10);
     twist_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0/freq_), std::bind(&PotentialControllerNode::control_loop, this));
 
-    load_scenario_server_ = create_service<LoadScenarioSrv>("potential_controller_node/load_scenario",
+    ctrl_enable_server_ = create_service<SetBoolSrv>("set_ctrl_enable",
+        [this](const std::shared_ptr<SetBoolSrv::Request> request, std::shared_ptr<SetBoolSrv::Response> response) {
+            response->old_val = ctrl_enabled_;
+            RCLCPP_INFO(this->get_logger(), "AAA %d %d", request->new_val, ctrl_enabled_);
+            ctrl_enabled_ = request->new_val;
+            w_pid_i_ = 0.0; // reset integrator to avoid any funny business!
+        }
+    );
+
+    load_scenario_server_ = create_service<LoadScenarioSrv>("load_scenario",
         [this](const std::shared_ptr<LoadScenarioSrv::Request> request, std::shared_ptr<LoadScenarioSrv::Response> response) {
             response->success = load_scenario(request->scenario_path, !scenario_loaded_);
             scenario_loaded_ = true;
+            w_pid_i_ = 0.0;
         }
     );
 
@@ -89,8 +93,8 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
             rotation_target_ = p.as_string();
         else if(p.get_name() == "vis_enabled")
             vis_enabled_ = p.as_bool();
-        else if(p.get_name() == "nav_enabled")
-            nav_enabled_ = p.as_bool();
+        else if(p.get_name() == "ctrl_enabled")
+            ctrl_enabled_ = p.as_bool();
         else if(p.get_name() == "w_pid_p")
             w_pid_p_ = p.as_double();
         else if(p.get_name() == "w_pid_i")
@@ -121,7 +125,7 @@ void PotentialControllerNode::control_loop() {
     double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
     msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
 
-    if(nav_enabled_) {
+    if(ctrl_enabled_) {
         w_pid_i_state_ += std::clamp(angle_error, -w_pid_i_clamp_, w_pid_i_clamp_);
         w_pid_d_state_ = angle_error;
         twist_publisher_->publish(msg);
