@@ -5,8 +5,10 @@
 #include <thread>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/qos.hpp>
 #include <rcl_interfaces/msg/set_parameters_result.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -27,7 +29,7 @@ namespace pt_potential_controller {
     using PoseMsg = geometry_msgs::msg::Pose;
     using LineMsg = pt_msgs::msg::Line;
     using BoolMsg = std_msgs::msg::Bool;
-    //using StringMsg = std_msgs::msg::Bool;
+    using FloatMsg = std_msgs::msg::Float32;
     using LoadScenarioSrv = pt_msgs::srv::LoadScenario;
     using SetBoolSrv = pt_msgs::srv::SetBool;
 
@@ -44,8 +46,10 @@ namespace pt_potential_controller {
             double w_pid_i_ = 0.1;
             double w_pid_d_ = 0.1;
             double w_pid_i_clamp_ = 1.0;
+            double w_pid_min_ = 0.03;
             bool vis_enabled_ = true;
             bool ctrl_enabled_ = false;
+            int loop_count = 0;
 
             // ROS interfaces
             std::vector<rclcpp::SubscriptionBase::SharedPtr> subs_;
@@ -53,6 +57,7 @@ namespace pt_potential_controller {
             rclcpp::Subscription<PointMsg>::SharedPtr sub_rotation_target_point_;
             //rclcpp::Subscription<BoolMsg>::SharedPtr sub_nav_enabled_;
             rclcpp::Publisher<TwistMsg>::SharedPtr twist_publisher_;
+            rclcpp::Publisher<FloatMsg>::SharedPtr angle_err_publisher_;
             // rclcpp::Publisher<BoolMsg>::SharedPtr ctrl_enabled_publisher_;
             // rclcpp::Publisher<BoolMsg>::SharedPtr scenario_path_publisher_;
             rclcpp::TimerBase::SharedPtr twist_timer_;

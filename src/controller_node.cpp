@@ -40,6 +40,10 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
+        ctrl_enabled_ = this->declare_parameter<double>("w_pid_min", 0.003, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
         vis_enabled_ = this->declare_parameter<bool>("vis_enabled", true, descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
@@ -47,7 +51,19 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         ctrl_enabled_ = this->declare_parameter<bool>("ctrl_enabled", true, descriptor);
     }
 
-    twist_publisher_ = this->create_publisher<TwistMsg>("cmd_vel", 10);
+    // rclcpp::QoS
+    // rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
+    // //custom_qos.history=RMW_QOS_POLICY_HISTORY_KEEP_LAST;
+    // //custom_qos.history=RMW_QOS_POLICY_HISTORY_KEEP_ALL;
+    // //custom_qos.depth=10;
+    // //custom_qos.reliability=RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+    // custom_qos.reliability=RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+    // custom_qos.durability=RMW_QOS_POLICY_DURABILITY_VOLATILE;
+    // //custom_qos.durability=RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 1), qos_profile);
+    twist_publisher_ = this->create_publisher<TwistMsg>("cmd_vel", qos);
+    angle_err_publisher_ = this->create_publisher<FloatMsg>("angle_err", qos);
     twist_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0/freq_), std::bind(&PotentialControllerNode::control_loop, this));
 
     ctrl_enable_server_ = create_service<SetBoolSrv>("set_ctrl_enable",
@@ -103,6 +119,8 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
             w_pid_d_ = p.as_double();
         else if(p.get_name() == "w_pid_i_clamp")
             w_pid_i_clamp_ = p.as_double();
+        else if(p.get_name() == "w_pid_min")
+            w_pid_min_ = p.as_double();
         else {
             result.successful = false;
             result.reason = "unimplemented";
@@ -123,7 +141,23 @@ void PotentialControllerNode::control_loop() {
     tuw::Pose2D ideal_pos;
     ideal_pos.set(control_pose_.position(), rotation_target_point_);
     double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
+    RCLCPP_WARN(this->get_logger(), "Angle error: %f", angle_error);
     msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
+
+
+    if(abs(angle_error) >= 0.2 && abs(msg.angular.z) < w_pid_min_) {
+        msg.angular.z =  w_pid_min_ * (angle_error < 0 ? -1 : 1);
+    }
+
+    // if(loop_count%2)
+    //     msg.angular.z = w_pid_min_;
+    // else    
+    //     msg.angular.z = -w_pid_min_;
+    // loop_count++;
+
+    FloatMsg angle_err_msg;
+    angle_err_msg.data = angle_error;
+    angle_err_publisher_->publish(angle_err_msg);
 
     if(ctrl_enabled_) {
         w_pid_i_state_ += std::clamp(angle_error, -w_pid_i_clamp_, w_pid_i_clamp_);
