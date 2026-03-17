@@ -1,27 +1,4 @@
 anchors:
-  pose:
-    id: "perceptron"
-    pos_topic: "/pt_pose"
-
-  point:
-    id: "enemy"
-    pos_topic: "/enemy_pose"
-    potentials:
-      constant: # slowly approach at a distance
-        const: -0.25
-      linear: # speed up when close
-        lin: -0.5
-
-  line:
-    id: "enemy_trajectory"
-    pos_topic: "/enemy_trajectory"
-    potentials:
-      exponential:
-        base: 2.718281828
-        exp: 0.2
-      constant: # counter min. force of 1 due to exponential function
-        const: -1.0
-
   line:
     id: "wall_left"
     pos_x0: -0.75
@@ -31,7 +8,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.1
+        exp: 0.01
 
   line:
     id: "wall_right"
@@ -42,7 +19,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.1
+        exp: 0.01
 
   line:
     id: "wall_bottom"
@@ -53,7 +30,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.1
+        exp: 0.01
 
   line:
     id: "wall_top"
@@ -64,7 +41,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.1
+        exp: 0.01
 
 
 visualization:

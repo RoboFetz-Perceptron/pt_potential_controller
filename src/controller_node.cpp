@@ -40,7 +40,11 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
-        ctrl_enabled_ = this->declare_parameter<double>("w_pid_min", 0.003, descriptor);
+        w_pid_min_w_ = this->declare_parameter<double>("w_pid_min_w", 0.003, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        w_pid_epsilon_ = this->declare_parameter<double>("w_pid_epsilon", 0.0, descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
@@ -77,17 +81,29 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
     load_scenario_server_ = create_service<LoadScenarioSrv>("load_scenario",
         [this](const std::shared_ptr<LoadScenarioSrv::Request> request, std::shared_ptr<LoadScenarioSrv::Response> response) {
-            response->success = load_scenario(request->scenario_path, !scenario_loaded_);
-            scenario_loaded_ = true;
-            w_pid_i_ = 0.0;
+            Scenario loaded_scenario  = Scenario();
+            if(load_scenario(request->scenario_path, loaded_scenario, !scenario_loaded_)) {
+                RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
+                scenario_ = std::make_shared<Scenario>(loaded_scenario);
+                scenario_loaded_ = true;
+                w_pid_i_ = 0.0;
+                response->success = true;
+            }
+            else
+                response->success = false;
         }
     );
 
     param_change_callback_ = this->add_on_set_parameters_callback(std::bind(&PotentialControllerNode::reload_params, this, std::placeholders::_1));
 
     if(scenario_path_ != "") {
-        load_scenario(scenario_path_, true);
-        scenario_loaded_ = true;
+        Scenario loaded_scenario  = Scenario();
+        if(load_scenario(scenario_path_, loaded_scenario, true)) {
+            RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
+            scenario_ = std::make_shared<Scenario>(loaded_scenario);
+            scenario_loaded_ = true;
+            w_pid_i_ = 0.0;
+        }
     }
 }
 
@@ -100,12 +116,17 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
         RCLCPP_INFO(this->get_logger(), "Received an update to parameter \"%s\" (%s)", p.get_name().c_str(), p.get_type_name().c_str());
         if(p.get_name() == "scenario_path") {
             scenario_path_ = p.as_string();
-            load_scenario(scenario_path_, true);
-            scenario_loaded_ = true;
+            Scenario loaded_scenario  = Scenario();
+            if(load_scenario(scenario_path_, loaded_scenario, true)) {
+                RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
+                scenario_ = std::make_shared<Scenario>(loaded_scenario);
+                scenario_loaded_ = true;
+                w_pid_i_ = 0.0;
+            }
         }
-        if(p.get_name() == "controlled_anchor")
+        else if(p.get_name() == "controlled_anchor")
             control_anchor_ = p.as_string();
-        if(p.get_name() == "rotation_target_anchor")
+        else if(p.get_name() == "rotation_target_anchor")
             rotation_target_ = p.as_string();
         else if(p.get_name() == "vis_enabled")
             vis_enabled_ = p.as_bool();
@@ -119,8 +140,10 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
             w_pid_d_ = p.as_double();
         else if(p.get_name() == "w_pid_i_clamp")
             w_pid_i_clamp_ = p.as_double();
-        else if(p.get_name() == "w_pid_min")
-            w_pid_min_ = p.as_double();
+        else if(p.get_name() == "w_pid_min_w")
+            w_pid_min_w_ = p.as_double();
+        else if(p.get_name() == "w_pid_epsilon")
+            w_pid_epsilon_ = p.as_double();
         else {
             result.successful = false;
             result.reason = "unimplemented";
@@ -141,19 +164,13 @@ void PotentialControllerNode::control_loop() {
     tuw::Pose2D ideal_pos;
     ideal_pos.set(control_pose_.position(), rotation_target_point_);
     double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
-    RCLCPP_WARN(this->get_logger(), "Angle error: %f", angle_error);
+    //RCLCPP_WARN(this->get_logger(), "Angle error: %f", angle_error);
     msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
 
 
-    if(abs(angle_error) >= 0.2 && abs(msg.angular.z) < w_pid_min_) {
-        msg.angular.z =  w_pid_min_ * (angle_error < 0 ? -1 : 1);
+    if(abs(angle_error) >= w_pid_epsilon_ && abs(msg.angular.z) < w_pid_min_w_) {
+        msg.angular.z =  w_pid_min_w_ * (angle_error < 0 ? -1 : 1);
     }
-
-    // if(loop_count%2)
-    //     msg.angular.z = w_pid_min_;
-    // else    
-    //     msg.angular.z = -w_pid_min_;
-    // loop_count++;
 
     FloatMsg angle_err_msg;
     angle_err_msg.data = angle_error;
@@ -171,7 +188,7 @@ void PotentialControllerNode::control_loop() {
 
 
 
-bool PotentialControllerNode::load_scenario(std::string path, bool init_poses) {
+bool PotentialControllerNode::load_scenario(std::string path, Scenario &scenario, bool init_poses) {
     try {
         subs_ = {}; // refererence counter of shared pointer should de-allocate subscribers -> old callbacks removed
         sub_control_pose_.reset();
@@ -182,17 +199,21 @@ bool PotentialControllerNode::load_scenario(std::string path, bool init_poses) {
 
         if(!file_root.IsMap())
             throw std::runtime_error("Root node is not a mapping containing either \"anchors\" or \"visualization\"");
-        Scenario loaded_scenario = Scenario();
+        //Scenario loaded_scenario = Scenario();
         for(std::pair<YAML::Node, YAML::Node> file_child : file_root) {
             if(file_child.first.as<std::string>() == "anchors")
-                load_anchors(file_child.second, loaded_scenario, init_poses);
+                load_anchors(file_child.second, scenario, init_poses);
             else if(file_child.first.as<std::string>() == "visualization")
-                load_vis(file_child.second, loaded_scenario);
+                load_vis(file_child.second, scenario);
+            else if(file_child.first.as<std::string>() == "included_scenario_yaml")
+                load_scenario(file_child.second.as<std::string>(), scenario, init_poses);
             else
                 throw std::runtime_error("Root node is not a mapping containing either \"anchors\" or \"visualization\"");
         }
-        RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
-        scenario_ = std::make_shared<Scenario>(loaded_scenario);
+        // auto updated_param = rclcpp::Parameter("scenario_path", rclcpp::ParameterValue(path));
+        // auto updated_params = std::vector<rclcpp::Parameter>();
+        // updated_params.push_back(updated_param);
+        // this->set_parameters(updated_params);
         return true;
     } catch(std::exception &ex) {
         RCLCPP_ERROR(this->get_logger(), "Exception while parsing YAML: %s", ex.what());
@@ -297,8 +318,8 @@ void PotentialControllerNode::load_anchors(YAML::Node anchors_map, Scenario &sce
                 );
             if(anchor_children["pos_x"] && anchor_children["pos_y"] && init_poses)
                 rotation_target_point_ = tuw::Point2D(tuw::Point2D(anchor_children["pos_x"].as<double>(), anchor_children["pos_y"].as<double>()));
-            else
-                rotation_target_point_ = tuw::Point2D();
+            //else
+            //    rotation_target_point_ = tuw::Point2D(); // not a good idea, should instead just disable rotation control
         }
         if(anchor_id == control_anchor_) {
             if(anchor_children["pos_topic"])
