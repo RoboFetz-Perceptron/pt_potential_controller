@@ -4,13 +4,18 @@ anchors:
   pose:
     id: "perceptron"
     pos_topic: "/pt_pose"
+    pos_x: 0.5
+    pos_y: 0.5
+    pos_t: 2.2
 
   point:
     id: "enemy"
     pos_topic: "/enemy_pose"
+    pos_x: 0.6
+    pos_y: 0.6
     potentials:
       constant: # slowly approach at a distance
-        const: -0.75
+        const: -0.25
       linear: # speed up when close
         lin: -0.5
 

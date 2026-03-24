@@ -24,6 +24,10 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
+        w_pid_cap_ = this->declare_parameter<double>("w_pid_cap", 3.14, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
         w_pid_p_ = this->declare_parameter<double>("w_pid_p", 1.0, descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
@@ -45,6 +49,10 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
         w_pid_epsilon_ = this->declare_parameter<double>("w_pid_epsilon", 0.0, descriptor);
+
+        descriptor = rcl_interfaces::msg::ParameterDescriptor{};
+        descriptor.description = "...";
+        w_pid_kick_diff_ = this->declare_parameter<double>("w_pid_kick_diff", 0.0, descriptor);
 
         descriptor = rcl_interfaces::msg::ParameterDescriptor{};
         descriptor.description = "...";
@@ -73,9 +81,8 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
     ctrl_enable_server_ = create_service<SetBoolSrv>("set_ctrl_enable",
         [this](const std::shared_ptr<SetBoolSrv::Request> request, std::shared_ptr<SetBoolSrv::Response> response) {
             response->old_val = ctrl_enabled_;
-            RCLCPP_INFO(this->get_logger(), "AAA %d %d", request->new_val, ctrl_enabled_);
             ctrl_enabled_ = request->new_val;
-            w_pid_i_ = 0.0; // reset integrator to avoid any funny business!
+            w_pid_i_state_ = 0.0; // reset integrator to avoid any funny business!
         }
     );
 
@@ -86,7 +93,7 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
                 RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
                 scenario_ = std::make_shared<Scenario>(loaded_scenario);
                 scenario_loaded_ = true;
-                w_pid_i_ = 0.0;
+                w_pid_i_state_ = 0.0;
                 response->success = true;
             }
             else
@@ -102,7 +109,7 @@ PotentialControllerNode::PotentialControllerNode(rclcpp::NodeOptions options) : 
             RCLCPP_INFO(this->get_logger(), "Loaded scenario!");
             scenario_ = std::make_shared<Scenario>(loaded_scenario);
             scenario_loaded_ = true;
-            w_pid_i_ = 0.0;
+            w_pid_i_state_ = 0.0;
         }
     }
 }
@@ -131,7 +138,9 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
         else if(p.get_name() == "vis_enabled")
             vis_enabled_ = p.as_bool();
         else if(p.get_name() == "ctrl_enabled")
-            ctrl_enabled_ = p.as_bool();
+            ctrl_enabled_ = p.as_bool();    
+        else if(p.get_name() == "w_pid_cap")
+            w_pid_cap_ = p.as_double();
         else if(p.get_name() == "w_pid_p")
             w_pid_p_ = p.as_double();
         else if(p.get_name() == "w_pid_i")
@@ -144,6 +153,8 @@ rcl_interfaces::msg::SetParametersResult PotentialControllerNode::reload_params(
             w_pid_min_w_ = p.as_double();
         else if(p.get_name() == "w_pid_epsilon")
             w_pid_epsilon_ = p.as_double();
+        else if(p.get_name() == "w_pid_kick_diff")
+            w_pid_kick_diff_ = p.as_double();
         else {
             result.successful = false;
             result.reason = "unimplemented";
@@ -165,22 +176,53 @@ void PotentialControllerNode::control_loop() {
     ideal_pos.set(control_pose_.position(), rotation_target_point_);
     double angle_error = tuw::angle_difference(ideal_pos.get_theta(), control_pose_.get_theta());
     //RCLCPP_WARN(this->get_logger(), "Angle error: %f", angle_error);
-    msg.angular.z = w_pid_p_*angle_error + w_pid_i_*w_pid_i_state_ + w_pid_d_*(angle_error-w_pid_d_state_);
+
+    if(ctrl_enabled_) {
+        double p = w_pid_p_*angle_error;
+
+        double i_max =  w_pid_cap_ - p;
+        double i_min = -w_pid_cap_ - p;
+        if(i_max < 0) i_max = 0;
+        if(i_min > 0) i_min = 0;
+        
+        if(abs(angle_error) >= w_pid_epsilon_)
+            w_pid_i_state_ += w_pid_i_*(angle_error + w_pid_prev_error_)/2.0;
+        else
+            w_pid_i_state_ = 0.0;
+        w_pid_i_state_ = std::clamp(w_pid_i_state_, i_min, i_max);
+
+        double d = w_pid_d_*(angle_error - w_pid_prev_error_);
+
+        w_pid_prev_error_ = angle_error;
+
+        double pid_out = p + w_pid_i_state_ + d;
+        pid_out = std::clamp(pid_out, -w_pid_cap_, w_pid_cap_);
+
+        if(abs(angle_error) >= w_pid_epsilon_ && abs(pid_out) > w_pid_min_w_)
+            msg.angular.z = pid_out;
+        else
+            msg.angular.z = 0.0;
 
 
-    if(abs(angle_error) >= w_pid_epsilon_ && abs(msg.angular.z) < w_pid_min_w_) {
-        msg.angular.z =  w_pid_min_w_ * (angle_error < 0 ? -1 : 1);
+        if(abs(angle_error - w_pid_prev_error_) <= w_pid_kick_diff_ && abs(msg.angular.z) > 0) {
+            TwistMsg kick;
+            kick.linear.x = f.x();
+            kick.linear.y = f.y();
+            kick.angular.z = 5.0 * (pid_out < 0 ? -1 : 1);
+            twist_publisher_->publish(kick);
+            std::chrono::milliseconds mil(15);
+            rclcpp::sleep_for(mil);
+        }
+
+        twist_publisher_->publish(msg);
+
+        w_pid_prev_out_ = pid_out;
+        w_pid_prev_error_ = angle_error;
     }
 
     FloatMsg angle_err_msg;
     angle_err_msg.data = angle_error;
     angle_err_publisher_->publish(angle_err_msg);
-
-    if(ctrl_enabled_) {
-        w_pid_i_state_ += std::clamp(angle_error, -w_pid_i_clamp_, w_pid_i_clamp_);
-        w_pid_d_state_ = angle_error;
-        twist_publisher_->publish(msg);
-    }
 
     if(vis_enabled_)
         scenario_->draw(); // warning: this blocks for at least 1ms --> make sure this does not mess with timer too much!

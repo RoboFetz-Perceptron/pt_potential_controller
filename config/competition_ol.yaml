@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    scenario_path: "ws02/src/pt_potential_controller/config/scenarios/attack.yaml"
+    controlled_anchor: "perceptron"
+    rotation_target_anchor: "enemy"
+    frequency: 15.0
+    w_pid_cap: 3.14
+    w_pid_p: 0.5
+    w_pid_i: 0.01
+    w_pid_d: 4.0
+    w_pid_min_w: 0.0
+    w_pid_epsilon: 0.2
+    w_pid_kick_diff: 0.01
+    vis_enabled: True
+    ctrl_enabled: False

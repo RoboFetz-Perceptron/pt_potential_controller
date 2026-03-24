@@ -43,12 +43,14 @@ namespace pt_potential_controller {
             std::string control_anchor_;
             std::string rotation_target_;
             double freq_ = 10.0;
+            double w_pid_cap_ = 5.0;
             double w_pid_p_ = 1.0;
             double w_pid_i_ = 0.1;
             double w_pid_d_ = 0.1;
             double w_pid_i_clamp_ = 1.0;
             double w_pid_min_w_ = 0.03;
             double w_pid_epsilon_ = 0.0;
+            double w_pid_kick_diff_ = 1.0;
             bool vis_enabled_ = true;
             bool ctrl_enabled_ = false;
             int loop_count = 0;
@@ -70,7 +72,8 @@ namespace pt_potential_controller {
             tuw::Point2D rotation_target_point_ = tuw::Point2D();
             bool scenario_loaded_ = false;
             double w_pid_i_state_ = 0.0;
-            double w_pid_d_state_ = 0.0;
+            double w_pid_prev_error_ = 0.0;
+            double w_pid_prev_out_ = 0.0;
 
         private:
             bool anchors_updated_ = true;

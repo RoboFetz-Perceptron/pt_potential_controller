@@ -43,6 +43,54 @@ anchors:
         base: 2.718281828
         exp: 0.01
 
+  point:
+    id: "hazard_blue"
+    pos_x: -0.575
+    pos_y: -0.575
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.001
+        f_max: 2.0
+      constant:
+        const: -1.0
+
+  point:
+    id: "hazard_red"
+    pos_x: 0.575
+    pos_y: 0.575
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.001
+        f_max: 2.0
+      constant:
+        const: -1.0
+
+  point:
+    id: "hazard_a"
+    pos_x: -0.18
+    pos_y:  0.18
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.001
+        f_max: 2.0
+      constant:
+        const: -1.0
+
+  point:
+    id: "hazard_b"
+    pos_x:  0.18
+    pos_y: -0.18
+    potentials:
+      exponential:
+        base: 2.718281828
+        exp: 0.001
+        f_max: 2.0
+      constant:
+        const: -1.0
+
 
 visualization:
   scale: 0.005 # world coordinate units per pixel
