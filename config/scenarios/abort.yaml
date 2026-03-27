@@ -1,0 +1,13 @@
+included_scenario_yaml: "ws02/src/pt_potential_controller/config/scenarios/comp_base.yaml"
+
+anchors:
+  pose:
+    id: "perceptron"
+    pos_topic: "/pt_pose"
+
+  point:
+    id: "enemy"
+    pos_topic: "/enemy_pose"
+    potentials:
+      constant: # disengage at constant speed
+        const: 1.5

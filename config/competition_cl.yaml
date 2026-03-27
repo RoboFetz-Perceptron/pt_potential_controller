@@ -5,8 +5,8 @@
     rotation_target_anchor: "enemy"
     frequency: 30.0
     w_pid_cap: 10.0
-    w_pid_p: 5.0
-    w_pid_i: 0.0 #0.05
+    w_pid_p: 4.0
+    w_pid_i: 0.05
     w_pid_d: 10.0
     w_pid_min_w: 0.0
     w_pid_kick_diff: -1.0

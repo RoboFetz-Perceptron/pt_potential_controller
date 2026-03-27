@@ -215,7 +215,6 @@ void PotentialControllerNode::control_loop() {
         }
 
         twist_publisher_->publish(msg);
-
         w_pid_prev_out_ = pid_out;
         w_pid_prev_error_ = angle_error;
     }

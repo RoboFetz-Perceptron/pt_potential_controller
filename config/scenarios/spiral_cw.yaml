@@ -5,14 +5,11 @@ anchors:
     id: "enemy"
     pos_topic: "/enemy_pose"
     potentials:
-      linear:
-        lin: -0.75
-        f_max: 2.0
-        d_offset: 0.75
-        d_invert: false
-      linear:
+      constant: # approach enemy ...
+        const: -0.5
+      linear: # ... while strafing sideways
         lin: 0.30
-        angle_twist: -1.57
+        angle_twist: 1.57
         f_max: 0.60
         f_sign_override: 1 # -1 ... always attract, 1 ... always repell
-        d_offset: 0.75
+        d_invert: false # need more speed at longer distances to get consistent circling rate

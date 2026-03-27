@@ -1,32 +1,18 @@
-included_scenario_yaml: "ws02/src/pt_potential_controller/config/scenarios/empty_arena.yaml"
+included_scenario_yaml: "ws02/src/pt_potential_controller/config/scenarios/comp_base.yaml"
 
 anchors:
-  pose:
-    id: "perceptron"
-    pos_topic: "/pt_pose"
-
   point:
     id: "enemy"
     pos_topic: "/enemy_pose"
     potentials:
       linear:
-        lin: -0.10
-        f_max: 0.5
-        d_offset: 0.3
+        lin: -0.75
+        f_max: 2.0
+        d_offset: 0.75
         d_invert: false
       linear:
-        lin: 0.15
+        lin: 0.30
         angle_twist: 1.57
-        f_max: 0.25
+        f_max: 0.60
         f_sign_override: 1 # -1 ... always attract, 1 ... always repell
-        d_offset: 0.3
-
-  line:
-    id: "enemy_trajectory"
-    pos_topic: "/enemy_trajectory"
-    potentials:
-      exponential:
-        base: 2.718281828
-        exp: 0.1
-      constant: # counter min. force of 1 due to exponential function
-        const: -1.0
+        d_offset: 0.75

@@ -8,7 +8,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.01
+        exp: 0.1
 
   line:
     id: "wall_right"
@@ -19,7 +19,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.01
+        exp: 0.1
 
   line:
     id: "wall_bottom"
@@ -30,7 +30,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.01
+        exp: 0.1
 
   line:
     id: "wall_top"
@@ -41,7 +41,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.01
+        exp: 0.1
 
   point:
     id: "hazard_blue"
@@ -50,7 +50,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.001
+        exp: 0.01
         f_max: 2.0
       constant:
         const: -1.0
@@ -62,7 +62,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.001
+        exp: 0.01
         f_max: 2.0
       constant:
         const: -1.0
@@ -74,7 +74,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.001
+        exp: 0.01
         f_max: 2.0
       constant:
         const: -1.0
@@ -86,17 +86,7 @@ anchors:
     potentials:
       exponential:
         base: 2.718281828
-        exp: 0.001
+        exp: 0.01
         f_max: 2.0
       constant:
         const: -1.0
-
-
-visualization:
-  scale: 0.005 # world coordinate units per pixel
-  width: 400  # window size in pixels
-  height: 400
-  center_x: 0.0 # center of window in world coordinates
-  center_y: 0.0
-  show_forces: false
-  f_max: 10.0 # max. force to scale colors for
