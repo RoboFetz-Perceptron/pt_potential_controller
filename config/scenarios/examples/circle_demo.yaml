@@ -1,0 +1,26 @@
+anchors:
+  point: # circle around primary target
+    id: "enemy"
+    pos_topic: "/enemy_pose"
+    potentials:
+      linear:
+        lin: -0.75
+        f_max: 2.0
+        d_offset: 0.75
+        d_invert: false
+      linear:
+        lin: 0.30
+        angle_twist: 1.57
+        f_max: 0.60
+        f_sign_override: 1 # -1 ... always attract, 1 ... always repell
+        d_offset: 0.75
+
+
+  point: # avoid secondary target
+      id: "enemy_secondary"
+      pos_topic: "/enemy_secondary_pose"
+      enabled: false
+      potentials:
+        linear:
+          lin: 0.20
+          f_max: 4.0
